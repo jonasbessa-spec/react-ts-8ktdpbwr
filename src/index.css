@@ -4,4 +4,33 @@ body {
   margin: 0;
   background-color: #f8fafc;
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}/* ESTILOS ESPECÍFICOS PARA GERAÇÃO DE PDF E IMPRESSÃO EXECUTIVA */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Ocultar elementos de navegação e botões durante a geração do PDF */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Ajuste dos cards e containers para fundo claro */
+  .bg-slate-900\/60, .bg-slate-950 {
+    background-color: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  h1, h2, p, td, th {
+    color: #0f172a !important;
+  }
+
+  /* Evitar quebra de página no meio de tabelas ou cards */
+  .grid, table, .rounded-xl {
+    page-break-inside: avoid;
+  }
 }
