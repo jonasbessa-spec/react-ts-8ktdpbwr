@@ -121,6 +121,8 @@ export default function AppLider() {
         <div className="flex items-center bg-slate-800 border border-slate-700 rounded-xl px-3">
           <Search size={18} className="text-slate-400" />
           <input
+            id="busca-equipamento"
+            name="busca"
             type="text"
             placeholder="Digitar número da frota..."
             value={busca}

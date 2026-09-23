@@ -33,6 +33,8 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
         <input
+          id="global-data"
+          name="data"
           type="date"
           value={filtros.data}
           onChange={(e) => setFiltros((prev: any) => ({ ...prev, data: e.target.value }))}
@@ -40,6 +42,8 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
         />
 
         <select
+          id="global-plantao"
+          name="plantao"
           value={filtros.plantao}
           onChange={(e) => setFiltros((prev: any) => ({ ...prev, plantao: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
@@ -51,6 +55,8 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
         </select>
 
         <select
+          id="global-funcao"
+          name="funcao"
           value={filtros.funcao}
           onChange={(e) => setFiltros((prev: any) => ({ ...prev, funcao: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
@@ -62,6 +68,8 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
         </select>
 
         <select
+          id="global-setor"
+          name="setor"
           value={filtros.setor}
           onChange={(e) => setFiltros((prev: any) => ({ ...prev, setor: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
@@ -73,6 +81,8 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
         </select>
 
         <select
+          id="global-status"
+          name="status"
           value={filtros.status}
           onChange={(e) => setFiltros((prev: any) => ({ ...prev, status: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
@@ -86,6 +96,8 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
         <div className="flex items-center bg-[#0b0f19] border border-[#334155] rounded-lg px-2">
           <Search size={14} className="text-slate-500" />
           <input
+            id="global-busca"
+            name="busca"
             type="text"
             placeholder="Pesquisar por nome..."
             value={filtros.busca}
