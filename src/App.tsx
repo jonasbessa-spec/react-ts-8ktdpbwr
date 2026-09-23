@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigError } from './lib/supabase';
 import PlanejamentoOperacional from './components/PlanejamentoOperacional';
+import ExecutiveOverview from './components/ExecutiveOverview';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -329,9 +330,9 @@ export default function App() {
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-100 text-slate-800 font-sans">
+    <div className="app-shell flex min-h-screen bg-slate-100 text-slate-800 font-sans">
       {/* Sidebar - Azul Porto do Pecém */}
-      <aside className="w-64 bg-blue-900 text-white flex flex-col justify-between p-4 shrink-0 shadow-xl">
+      <aside className="app-sidebar w-64 bg-blue-900 text-white flex flex-col justify-between p-4 shrink-0 shadow-xl">
         <div className="space-y-6">
           <div className="flex items-center gap-3 px-2 py-3 border-b border-blue-800">
             <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-md">
@@ -392,7 +393,7 @@ export default function App() {
       </aside>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
+      <main className="app-main flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
         {erroCarregamento && (
           <div
             className="flex items-start justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
@@ -409,7 +410,7 @@ export default function App() {
           </div>
         )}
         {/* Topbar */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white border border-slate-200 p-4 rounded-2xl shadow-sm gap-4">
+        <div className="app-topbar flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white border border-slate-200 p-4 rounded-2xl shadow-sm gap-4">
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-extrabold text-slate-900">
@@ -445,6 +446,19 @@ export default function App() {
         {/* MÓDULO GERENCIAL: Prontidão para Operação de Navio */}
         {abaAtiva === 'dashboard' && (
           <div className="space-y-6">
+            <ExecutiveOverview
+              totalCM={totalCM}
+              dispCM={dispCM}
+              totalSR={totalSR}
+              dispSR={dispSR}
+              totalPatio={totalPatio}
+              dispPatio={dispPatio}
+              conjuntosProntos={conjuntosProntos}
+              percCM={percCM}
+              percSR={percSR}
+              percPatio={percPatio}
+              turno={turno}
+            />
             <PlanejamentoOperacional />
             {/* Status de Prontidão do Berço */}
             <div className="bg-blue-900 text-white p-5 rounded-2xl border border-blue-800 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
