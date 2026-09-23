@@ -563,6 +563,8 @@ export default function App() {
             <div className="flex items-center bg-slate-50 border border-slate-300 rounded-xl px-3 focus-within:border-blue-600 transition">
               <Search size={16} className="text-slate-400" />
               <input
+                id="filtro-busca"
+                name="busca"
                 type="text"
                 placeholder="Buscar por Frota, BEM ou Observação..."
                 value={filtros.busca}
@@ -572,6 +574,8 @@ export default function App() {
             </div>
 
             <select
+              id="filtro-status"
+              name="status"
               value={filtros.status}
               onChange={(e) => setFiltros(p => ({ ...p, status: e.target.value }))}
               className="bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:border-blue-600"
@@ -582,6 +586,8 @@ export default function App() {
             </select>
 
             <select
+              id="filtro-categoria"
+              name="categoria"
               value={filtros.categoria}
               onChange={(e) => setFiltros(p => ({ ...p, categoria: e.target.value }))}
               disabled={abaAtiva === 'cm' || abaAtiva === 'sr'}
@@ -721,6 +727,8 @@ export default function App() {
               <div>
                 <label className="block text-slate-700 mb-1.5">Tipo de Frota</label>
                 <select 
+                  id="cadastro-origem"
+                  name="origem"
                   value={novoItem.origem}
                   onChange={(e) => setNovoItem(p => ({ ...p, origem: e.target.value }))}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 font-bold text-slate-900 outline-none focus:border-blue-600"
@@ -736,6 +744,8 @@ export default function App() {
                   <div>
                     <label className="block text-slate-700 mb-1.5">Categoria *</label>
                     <select 
+                      id="cadastro-categoria"
+                      name="categoria"
                       value={novoItem.categoria}
                       onChange={(e) => setNovoItem(p => ({ ...p, categoria: e.target.value }))}
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 outline-none focus:border-blue-600"
@@ -754,6 +764,8 @@ export default function App() {
                     <div>
                       <label className="block text-slate-700 mb-1.5">Identificação BEM *</label>
                       <input 
+                        id="cadastro-bem"
+                        name="codigoOuBem"
                         type="text" 
                         placeholder="Ex: CN01"
                         value={novoItem.codigoOuBem}
@@ -765,6 +777,8 @@ export default function App() {
                     <div>
                       <label className="block text-slate-700 mb-1.5">SWL (Capacidade)</label>
                       <input 
+                        id="cadastro-swl"
+                        name="swlOuTipo"
                         type="text" 
                         placeholder="Ex: 40 TON"
                         value={novoItem.swlOuTipo}
@@ -779,6 +793,8 @@ export default function App() {
                   <div>
                     <label className="block text-slate-700 mb-1.5">Código da Frota *</label>
                     <input 
+                      id="cadastro-frota"
+                      name="codigoOuBem"
                       type="text" 
                       placeholder="Ex: CM-1050"
                       value={novoItem.codigoOuBem}
@@ -790,6 +806,8 @@ export default function App() {
                   <div>
                     <label className="block text-slate-700 mb-1.5">Localização</label>
                     <input 
+                      id="cadastro-localizacao"
+                      name="localizacao"
                       type="text" 
                       placeholder="Ex: PÁTIO"
                       value={novoItem.localizacao}
