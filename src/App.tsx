@@ -1,24 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigError } from './lib/supabase';
-import PlanejamentoOperacional from './components/PlanejamentoOperacional';
 import ExecutiveOverview from './components/ExecutiveOverview';
 import ExecutiveOperations from './components/ExecutiveOperations';
 import ShipBerthForecast from './components/ShipBerthForecast';
-import { 
-  LayoutDashboard, 
-  Truck, 
-  Layers, 
-  Wrench, 
-  Radio, 
-  Search, 
-  SlidersHorizontal, 
-  Download, 
-  RefreshCw, 
-  ChevronLeft, 
-  ChevronRight, 
-  CheckCircle2, 
-  XCircle, 
-  PlusCircle, 
+import {
+  LayoutDashboard,
+  Truck,
+  Layers,
+  Wrench,
+  Radio,
+  Search,
+  SlidersHorizontal,
+  Download,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  PlusCircle,
   X,
   FilterX,
   Ship,
@@ -29,13 +28,14 @@ import {
 export default function App() {
   const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'cm' | 'sr' | 'patio'>('dashboard');
   const [turno, setTurno] = useState('Diurno');
-  
+
   // Estados de dados do Supabase
   const [cavalos, setCavalos] = useState<any[]>([]);
   const [reboques, setReboques] = useState<any[]>([]);
   const [equipamentosPatio, setEquipamentosPatio] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
+  const [modoDemonstracao, setModoDemonstracao] = useState(false);
 
   // Modal de Novo Cadastro
   const [modalAberto, setModalAberto] = useState(false);
@@ -90,10 +90,18 @@ export default function App() {
       if (resCM.data) setCavalos(resCM.data);
       if (resSR.data) setReboques(resSR.data);
       if (resPatio.data) setEquipamentosPatio(resPatio.data);
+      setModoDemonstracao(false);
     } catch (cause) {
       const message = getSupabaseErrorMessage(cause, 'Não foi possível sincronizar os equipamentos.');
       console.error('Erro na sincronização:', cause);
-      setErroCarregamento(message);
+      const demoCM = Array.from({ length: 25 }, (_, index) => ({ FROTA: `CM-DEMO-${String(index + 1).padStart(2, '0')}`, TIPO: 'VOLVO', STATUS: index === 4 ? 'MANUTENÇÃO' : 'OPERACIONAL', ATIVIDADE: index === 4 ? 'EM REPARO' : 'OPERANDO', LOCALIZAÇÃO: 'PORTO' }));
+      const demoSR = Array.from({ length: 43 }, (_, index) => ({ FROTA: `SR-DEMO-${String(index + 1).padStart(2, '0')}`, TIPO: 'STANDARD', STATUS: index % 7 === 0 ? 'PARADO' : 'OPERACIONAL', ATIVIDADE: index % 7 === 0 ? 'MANUTENÇÃO PREVENTIVA' : 'DISPONÍVEL', LOCALIZAÇÃO: 'PORTO' }));
+      const demoPatio = Array.from({ length: 49 }, (_, index) => ({ id: `patio-demo-${index + 1}`, bem: `BEM-${String(index + 1).padStart(3, '0')}`, categoria: index % 3 === 0 ? 'GUINDASTES' : 'REACH STACKERS', status: index % 5 === 0 ? 'MANUTENÇÃO' : 'DISPONÍVEL', observacao: index % 5 === 0 ? 'Em manutenção preventiva' : 'Pronto para operação', dias_parado: index % 5 === 0 ? 2 : 0 }));
+      setCavalos(demoCM);
+      setReboques(demoSR);
+      setEquipamentosPatio(demoPatio);
+      setModoDemonstracao(true);
+      setErroCarregamento(`Modo demonstração: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -233,38 +241,21 @@ export default function App() {
   const percSR = totalSR > 0 ? Math.round((dispSR / totalSR) * 100) : 0;
   const percPatio = totalPatio > 0 ? Math.round((dispPatio / totalPatio) * 100) : 0;
 
-  // Agrupamento de categorias de Pátio
-  const detalheCategorias = useMemo(() => {
-    const mapa: Record<string, { total: number; disp: number }> = {};
-    equipamentosPatio.forEach(e => {
-      const cat = e.categoria || 'OUTROS';
-      if (!mapa[cat]) mapa[cat] = { total: 0, disp: 0 };
-      mapa[cat].total += 1;
-      if (String(e.status).toUpperCase() === 'DISPONÍVEL') mapa[cat].disp += 1;
-    });
-    return Object.entries(mapa).map(([categoria, qtds]) => ({
-      categoria,
-      total: qtds.total,
-      disp: qtds.disp,
-      perc: qtds.total > 0 ? Math.round((qtds.disp / qtds.total) * 100) : 0
-    }));
-  }, [equipamentosPatio]);
-
   // Aplicador de Filtros
   const dadosFiltrados = useMemo(() => {
     const buscaLower = filtros.busca.trim().toLowerCase();
 
     const aplicarFiltros = (item: any, ePatio = false) => {
-      const identificacao = ePatio 
-        ? String(item.bem || '').toLowerCase() 
+      const identificacao = ePatio
+        ? String(item.bem || '').toLowerCase()
         : getValor(item, ['FROTA', 'frota']).toLowerCase();
-      
-      const obsOuTipo = ePatio 
-        ? String(item.observacao || '').toLowerCase() 
+
+      const obsOuTipo = ePatio
+        ? String(item.observacao || '').toLowerCase()
         : getValor(item, ['TIPO', 'tipo']).toLowerCase();
 
-      const st = ePatio 
-        ? String(item.status || '').toUpperCase() 
+      const st = ePatio
+        ? String(item.status || '').toUpperCase()
         : getValor(item, ['STATUS', 'status']).toUpperCase();
 
       const cat = ePatio ? String(item.categoria || '').toUpperCase() : 'OUTROS';
@@ -347,27 +338,27 @@ export default function App() {
           </div>
 
           <nav aria-label="Seções do painel" className="space-y-1.5">
-            <button 
+            <button
               onClick={() => setAbaAtiva('dashboard')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
               <div className="flex items-center gap-3"><LayoutDashboard size={16} /> Painel Gerencial</div>
             </button>
-            <button 
+            <button
               onClick={() => setAbaAtiva('cm')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'cm' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
               <div className="flex items-center gap-3"><Truck size={16} /> Cavalos Mecânicos</div>
               <span className="bg-blue-950 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalCM}</span>
             </button>
-            <button 
+            <button
               onClick={() => setAbaAtiva('sr')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'sr' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
               <div className="flex items-center gap-3"><Layers size={16} /> Semirreboques</div>
               <span className="bg-blue-950 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalSR}</span>
             </button>
-            <button 
+            <button
               onClick={() => setAbaAtiva('patio')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'patio' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
@@ -378,14 +369,14 @@ export default function App() {
         </div>
 
         <div className="space-y-3 pt-4 border-t border-blue-800">
-          <button 
+          <button
             onClick={() => setModalAberto(true)}
             className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md"
           >
             <PlusCircle size={16} /> Novo Cadastro
           </button>
 
-          <button 
+          <button
             onClick={carregarDados}
             className="w-full flex items-center justify-center gap-2 bg-blue-800 hover:bg-blue-700 text-blue-100 text-xs font-bold py-2 rounded-xl transition border border-blue-700"
           >
@@ -416,8 +407,8 @@ export default function App() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-extrabold text-slate-900">
-                {abaAtiva === 'dashboard' ? 'Planejamento e Controle de Equipamentos - Porto do Pecém' : 
-                 abaAtiva === 'cm' ? 'Gestão de Cavalos Mecânicos (CM)' : 
+                {abaAtiva === 'dashboard' ? 'Planejamento e Controle de Equipamentos - Porto do Pecém' :
+                 abaAtiva === 'cm' ? 'Gestão de Cavalos Mecânicos (CM)' :
                  abaAtiva === 'sr' ? 'Gestão de Semirreboques (SR)' : 'Equipamentos e Máquinas de Pátio'}
               </h2>
               <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
@@ -428,14 +419,14 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={exportarCSV}
               className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition shadow-sm"
             >
               <Download size={14} /> Exportar CSV
             </button>
-            <select 
-              value={turno} 
+            <select
+              value={turno}
               onChange={(e) => setTurno(e.target.value)}
               className="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-600"
             >
@@ -448,6 +439,7 @@ export default function App() {
         {/* MÓDULO GERENCIAL: Prontidão para Operação de Navio */}
         {abaAtiva === 'dashboard' && (
           <div className="space-y-6">
+            {modoDemonstracao && <div className="demo-banner" role="status">Modo demonstração ativo: os indicadores de frota exibidos são exemplos até a atualização da chave anon do Supabase.</div>}
             <ExecutiveOverview
               totalCM={totalCM}
               dispCM={dispCM}
@@ -463,101 +455,6 @@ export default function App() {
             />
             <ExecutiveOperations />
             <ShipBerthForecast />
-            <PlanejamentoOperacional />
-            {/* Status de Prontidão do Berço */}
-            <div className="bg-blue-900 text-white p-5 rounded-2xl border border-blue-800 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-700 p-3 rounded-2xl text-white">
-                  <Ship size={28} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black tracking-wide">CAPACIDADE DE ATENDIMENTO A NAVIOS</h3>
-                    <span className="bg-blue-500/30 text-blue-100 border border-blue-400/30 text-[10px] font-bold px-2 py-0.5 rounded-md">OP. SIMULTÂNEA</span>
-                  </div>
-                  <p className="text-xs text-blue-200 mt-0.5">
-                    Você possui <strong className="text-white text-sm">{conjuntosProntos} conjuntos (CM + SR)</strong> operacionais para embarque/desembarque imediato.
-                  </p>
-                </div>
-              </div>
-              <div className="bg-blue-950/80 border border-blue-800 px-4 py-2.5 rounded-xl text-center">
-                <p className="text-[10px] font-bold text-blue-300 uppercase">Status Operacional</p>
-                <p className="text-sm font-black text-emerald-400 flex items-center justify-center gap-1 mt-0.5">
-                  <Activity size={14} /> {percCM >= 80 ? 'PRONTO PARA OPERAR' : 'REQUER ATENÇÃO'}
-                </p>
-              </div>
-            </div>
-
-            {/* Cards Indicadores de Frota (CM, SR, PÁTIO) */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-                <div className="flex justify-between items-center">
-                  <p className="text-xs font-black text-slate-500 uppercase">Cavalos Mecânicos (CM)</p>
-                  <div className="bg-blue-100 p-2 rounded-xl text-blue-700"><Truck size={20} /></div>
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-slate-900">{dispCM}</span>
-                  <span className="text-sm font-bold text-slate-400">/ {totalCM} Total</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${percCM}%` }}></div>
-                </div>
-                <p className="text-[11px] font-bold text-blue-700 mt-2">{percCM}% Disponível no Terminal</p>
-              </div>
-
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-                <div className="flex justify-between items-center">
-                  <p className="text-xs font-black text-slate-500 uppercase">Semirreboques (SR)</p>
-                  <div className="bg-blue-100 p-2 rounded-xl text-blue-700"><Layers size={20} /></div>
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-slate-900">{dispSR}</span>
-                  <span className="text-sm font-bold text-slate-400">/ {totalSR} Total</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-                  <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${percSR}%` }}></div>
-                </div>
-                <p className="text-[11px] font-bold text-blue-700 mt-2">{percSR}% Disponível no Terminal</p>
-              </div>
-
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
-                <div className="flex justify-between items-center">
-                  <p className="text-xs font-black text-slate-500 uppercase">Equipamentos de Pátio</p>
-                  <div className="bg-blue-100 p-2 rounded-xl text-blue-700"><Wrench size={20} /></div>
-                </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-slate-900">{dispPatio}</span>
-                  <span className="text-sm font-bold text-slate-400">/ {totalPatio} Total</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
-                  <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${percPatio}%` }}></div>
-                </div>
-                <p className="text-[11px] font-bold text-emerald-700 mt-2">{percPatio}% Disponível no Terminal</p>
-              </div>
-            </div>
-
-            {/* Gráfico Visual de Disponibilidade por Categoria do Pátio */}
-            <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-4">
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-                Disponibilidade por Categoria Operacional (Guindastes, Reach Stackers, Forklifts)
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {detalheCategorias.map((item) => (
-                  <div key={item.categoria} className="bg-slate-50 border border-slate-200 p-3 rounded-xl space-y-1.5">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-extrabold text-slate-800">{item.categoria}</span>
-                      <span className="font-black text-blue-900">{item.disp} / {item.total} ({item.perc}%)</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                      <div 
-                        className={`h-2.5 rounded-full ${item.perc >= 75 ? 'bg-emerald-500' : item.perc >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} 
-                        style={{ width: `${item.perc}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
@@ -568,7 +465,7 @@ export default function App() {
               <SlidersHorizontal size={14} className="text-blue-700" /> Filtros Operacionais
             </span>
             {(filtros.busca || filtros.status !== 'TODOS' || filtros.categoria !== 'TODOS') && (
-              <button 
+              <button
                 onClick={() => setFiltros({ busca: '', status: 'TODOS', categoria: 'TODOS' })}
                 className="text-xs font-bold text-rose-600 hover:text-rose-800 transition flex items-center gap-1"
               >
@@ -744,7 +641,7 @@ export default function App() {
             <form onSubmit={handleCadastrar} className="p-5 space-y-4 text-xs font-bold text-slate-800">
               <div>
                 <label className="block text-slate-700 mb-1.5">Tipo de Frota</label>
-                <select 
+                <select
                   id="cadastro-origem"
                   name="origem"
                   value={novoItem.origem}
@@ -761,7 +658,7 @@ export default function App() {
                 <>
                   <div>
                     <label className="block text-slate-700 mb-1.5">Categoria *</label>
-                    <select 
+                    <select
                       id="cadastro-categoria"
                       name="categoria"
                       value={novoItem.categoria}
@@ -781,23 +678,23 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-slate-700 mb-1.5">Identificação BEM *</label>
-                      <input 
+                      <input
                         id="cadastro-bem"
                         name="codigoOuBem"
-                        type="text" 
+                        type="text"
                         placeholder="Ex: CN01"
                         value={novoItem.codigoOuBem}
                         onChange={(e) => setNovoItem(p => ({ ...p, codigoOuBem: e.target.value }))}
                         className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 font-bold text-slate-900 outline-none focus:border-blue-600"
-                        required 
+                        required
                       />
                     </div>
                     <div>
                       <label className="block text-slate-700 mb-1.5">SWL (Capacidade)</label>
-                      <input 
+                      <input
                         id="cadastro-swl"
                         name="swlOuTipo"
-                        type="text" 
+                        type="text"
                         placeholder="Ex: 40 TON"
                         value={novoItem.swlOuTipo}
                         onChange={(e) => setNovoItem(p => ({ ...p, swlOuTipo: e.target.value }))}
@@ -810,23 +707,23 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-slate-700 mb-1.5">Código da Frota *</label>
-                    <input 
+                    <input
                       id="cadastro-frota"
                       name="codigoOuBem"
-                      type="text" 
+                      type="text"
                       placeholder="Ex: CM-1050"
                       value={novoItem.codigoOuBem}
                       onChange={(e) => setNovoItem(p => ({ ...p, codigoOuBem: e.target.value }))}
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 font-bold text-slate-900 outline-none focus:border-blue-600"
-                      required 
+                      required
                     />
                   </div>
                   <div>
                     <label className="block text-slate-700 mb-1.5">Localização</label>
-                    <input 
+                    <input
                       id="cadastro-localizacao"
                       name="localizacao"
-                      type="text" 
+                      type="text"
                       placeholder="Ex: PÁTIO"
                       value={novoItem.localizacao}
                       onChange={(e) => setNovoItem(p => ({ ...p, localizacao: e.target.value }))}
@@ -837,15 +734,15 @@ export default function App() {
               )}
 
               <div className="flex gap-3 pt-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setModalAberto(false)}
                   className="w-1/2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 rounded-xl transition"
                 >
                   Cancelar
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={salvando}
                   className="w-1/2 bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-md"
                 >

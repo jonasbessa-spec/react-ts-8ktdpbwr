@@ -48,6 +48,7 @@ body {
 .app-main option { background: #0f1d2f; color: #e2e8f0; }
 .app-main .hover\:bg-slate-50:hover,
 .app-main .hover\:bg-blue-50\/50:hover { background: rgba(30, 64, 95, .28) !important; }
+.demo-banner { padding: .65rem .8rem; border: 1px solid rgba(251,191,36,.3); border-radius: .65rem; color: #fde68a; background: rgba(120,74,0,.16); font-size: .68rem; }
 
 .executive-overview { color: #e2e8f0; }
 .executive-hero {
