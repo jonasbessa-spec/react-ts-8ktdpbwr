@@ -49,11 +49,12 @@ function parseShips(html: string): ShipForecast[] {
   return rowsAfterHeader.flatMap((cells) => {
     const berthMatch = cells[berthIndex].match(/\b([5-8])\b/);
     const berth = berthMatch ? Number(berthMatch[1]) : NaN;
-    if (!ALLOWED_BERTHS.has(berth) || normalize(cells[statusIndex]) !== 'PROGRAMADO') return [];
+    const cargoValue = cargoIndex >= 0 ? cells[cargoIndex] || '' : '';
+    if (!ALLOWED_BERTHS.has(berth) || normalize(cells[statusIndex]) !== 'PROGRAMADO' || !/CARGA\s*GERAL|GENERAL\s*CARGO/i.test(cargoValue)) return [];
     return [{
       nomeNavio: cells[shipIndex] || 'Não informado',
       imo: imoIndex >= 0 ? cells[imoIndex] || 'Não informado' : 'Não informado',
-      cargaGeral: cargoIndex >= 0 ? cells[cargoIndex] || 'Não informado' : 'Não informado',
+      cargaGeral: cargoValue || 'Carga Geral',
       bercoProgramado: berth,
       eta: etaIndex >= 0 ? cells[etaIndex] || 'Não informado' : 'Não informado',
       etd: etdIndex >= 0 ? cells[etdIndex] || 'Não informado' : 'Não informado',

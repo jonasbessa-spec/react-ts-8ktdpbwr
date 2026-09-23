@@ -22,11 +22,12 @@ function parseShips(html) {
   return rows.slice(rows.indexOf(header) + 1).flatMap((cells) => {
     const berthMatch = cells[berth].match(/\b([5-8])\b/);
     const berthNumber = berthMatch ? Number(berthMatch[1]) : NaN;
-    if (!ALLOWED_BERTHS.has(berthNumber) || normalize(cells[status]) !== 'PROGRAMADO') return [];
+    const cargoValue = cargo >= 0 ? cells[cargo] || '' : '';
+    if (!ALLOWED_BERTHS.has(berthNumber) || normalize(cells[status]) !== 'PROGRAMADO' || !/CARGA\s*GERAL|GENERAL\s*CARGO/i.test(cargoValue)) return [];
     return [{
       nomeNavio: cells[ship] || 'Não informado',
       imo: imo >= 0 ? cells[imo] || 'Não informado' : 'Não informado',
-      cargaGeral: cargo >= 0 ? cells[cargo] || 'Não informado' : 'Não informado',
+      cargaGeral: cargoValue || 'Carga Geral',
       bercoProgramado: berthNumber,
       eta: eta >= 0 ? cells[eta] || 'Não informado' : 'Não informado',
       etd: etd >= 0 ? cells[etd] || 'Não informado' : 'Não informado',
