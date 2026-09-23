@@ -1,10 +1,32 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'public-anon-key';
+const FALLBACK_URL = 'https://placeholder.supabase.co';
+const FALLBACK_KEY = 'public-anon-key';
+
+const cleanEnvValue = (value: unknown) =>
+  typeof value === 'string' ? value.trim().replace(/^['"]|['"]$/g, '') : '';
+
+const configuredUrl = cleanEnvValue(import.meta.env.VITE_SUPABASE_URL);
+const configuredKey = cleanEnvValue(import.meta.env.VITE_SUPABASE_ANON_KEY);
+
+const isValidHttpUrl = (value: string) => {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.host);
+  } catch {
+    return false;
+  }
+};
+
+export const supabaseConfigError = configuredUrl && !isValidHttpUrl(configuredUrl)
+  ? 'A variável VITE_SUPABASE_URL na Vercel não é uma URL HTTP/HTTPS válida.'
+  : null;
+
+const SUPABASE_URL = isValidHttpUrl(configuredUrl) ? configuredUrl : FALLBACK_URL;
+const SUPABASE_ANON_KEY = configuredKey || FALLBACK_KEY;
 
 export const supabaseConfigured = Boolean(
-  import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY
+  isValidHttpUrl(configuredUrl) && configuredKey
 );
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

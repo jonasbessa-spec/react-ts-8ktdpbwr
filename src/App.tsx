@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { getSupabaseErrorMessage, supabase, supabaseConfigured } from './lib/supabase';
+import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigError } from './lib/supabase';
 import PlanejamentoOperacional from './components/PlanejamentoOperacional';
 import { 
   LayoutDashboard, 
@@ -66,7 +66,10 @@ export default function App() {
     setErroCarregamento(null);
 
     if (!supabaseConfigured) {
-      setErroCarregamento('Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente.');
+      setErroCarregamento(
+        supabaseConfigError ||
+        'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente.'
+      );
       setLoading(false);
       return;
     }

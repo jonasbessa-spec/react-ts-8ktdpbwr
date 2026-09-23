@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getSupabaseErrorMessage, supabase, supabaseConfigured } from '../lib/supabase';
+import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigError } from '../lib/supabase';
 
 export interface PranchaKPI {
   operacao_id: string;
@@ -35,7 +35,10 @@ export function useCockpitData() {
     if (!supabaseConfigured) {
       setPranchaData([]);
       setFrotaData([]);
-      setError('Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente.');
+      setError(
+        supabaseConfigError ||
+        'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente.'
+      );
       setLoading(false);
       return;
     }
