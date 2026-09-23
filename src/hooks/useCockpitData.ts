@@ -1,10 +1,5 @@
-import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+import { useCallback, useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
 
 export interface PranchaKPI {
   operacao_id: string;
@@ -30,16 +25,30 @@ export function useCockpitData() {
   const [pranchaData, setPranchaData] = useState<PranchaKPI[]>([]);
   const [frotaData, setFrotaData] = useState<FrotaKPI[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data: prancha } = await supabase.from('view_kpi_prancha_operacional').select('*');
-    const { data: frota } = await supabase.from('view_kpi_disponibilidade_frota').select('*');
+    setError(null);
 
-    if (prancha) setPranchaData(prancha);
-    if (frota) setFrotaData(frota);
-    setLoading(false);
-  };
+    try {
+      const [pranchaResult, frotaResult] = await Promise.all([
+        supabase.from('view_kpi_prancha_operacional').select('*'),
+        supabase.from('view_kpi_disponibilidade_frota').select('*')
+      ]);
+
+      if (pranchaResult.error) throw pranchaResult.error;
+      if (frotaResult.error) throw frotaResult.error;
+
+      setPranchaData(pranchaResult.data ?? []);
+      setFrotaData(frotaResult.data ?? []);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Não foi possível carregar os indicadores.';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -54,7 +63,7 @@ export function useCockpitData() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchData]);
 
-  return { pranchaData, frotaData, loading, refetch: fetchData };
+  return { pranchaData, frotaData, loading, error, refetch: fetchData };
 }
