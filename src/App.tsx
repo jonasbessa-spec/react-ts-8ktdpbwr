@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigError } from './lib/supabase';
 import PlanejamentoOperacional from './components/PlanejamentoOperacional';
 import ExecutiveOverview from './components/ExecutiveOverview';
+import ExecutiveOperations from './components/ExecutiveOperations';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -459,6 +460,7 @@ export default function App() {
               percPatio={percPatio}
               turno={turno}
             />
+            <ExecutiveOperations />
             <PlanejamentoOperacional />
             {/* Status de Prontidão do Berço */}
             <div className="bg-blue-900 text-white p-5 rounded-2xl border border-blue-800 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
