@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from './lib/supabase';
+import { getSupabaseErrorMessage, supabase, supabaseConfigured } from './lib/supabase';
+import PlanejamentoOperacional from './components/PlanejamentoOperacional';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -63,6 +64,13 @@ export default function App() {
   const carregarDados = async () => {
     setLoading(true);
     setErroCarregamento(null);
+
+    if (!supabaseConfigured) {
+      setErroCarregamento('Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const [resCM, resSR, resPatio] = await Promise.all([
         supabase.from('cm').select('*'),
@@ -77,7 +85,7 @@ export default function App() {
       if (resSR.data) setReboques(resSR.data);
       if (resPatio.data) setEquipamentosPatio(resPatio.data);
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Não foi possível sincronizar os equipamentos.';
+      const message = getSupabaseErrorMessage(cause, 'Não foi possível sincronizar os equipamentos.');
       console.error('Erro na sincronização:', cause);
       setErroCarregamento(message);
     } finally {
@@ -88,6 +96,10 @@ export default function App() {
   // Carregamento Inicial + Assinatura de Canais Realtime
   useEffect(() => {
     carregarDados();
+
+    if (!supabaseConfigured) {
+      return;
+    }
 
     // Inscrição em tempo real para refletir inputs dos líderes no PWA
     const canalCM = supabase
@@ -430,6 +442,7 @@ export default function App() {
         {/* MÓDULO GERENCIAL: Prontidão para Operação de Navio */}
         {abaAtiva === 'dashboard' && (
           <div className="space-y-6">
+            <PlanejamentoOperacional />
             {/* Status de Prontidão do Berço */}
             <div className="bg-blue-900 text-white p-5 rounded-2xl border border-blue-800 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex items-center gap-4">
