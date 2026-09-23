@@ -31,6 +31,7 @@ export default function App() {
   const [reboques, setReboques] = useState<any[]>([]);
   const [equipamentosPatio, setEquipamentosPatio] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
 
   // Modal de Novo Cadastro
   const [modalAberto, setModalAberto] = useState(false);
@@ -61,6 +62,7 @@ export default function App() {
   // Função para buscar os dados do Supabase
   const carregarDados = async () => {
     setLoading(true);
+    setErroCarregamento(null);
     try {
       const [resCM, resSR, resPatio] = await Promise.all([
         supabase.from('cm').select('*'),
@@ -68,11 +70,16 @@ export default function App() {
         supabase.from('equipamentos_patio').select('*').order('categoria', { ascending: true })
       ]);
 
+      const primeiroErro = resCM.error || resSR.error || resPatio.error;
+      if (primeiroErro) throw primeiroErro;
+
       if (resCM.data) setCavalos(resCM.data);
       if (resSR.data) setReboques(resSR.data);
       if (resPatio.data) setEquipamentosPatio(resPatio.data);
-    } catch (e) {
-      console.error('Erro na sincronização:', e);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Não foi possível sincronizar os equipamentos.';
+      console.error('Erro na sincronização:', cause);
+      setErroCarregamento(message);
     } finally {
       setLoading(false);
     }
@@ -282,18 +289,19 @@ export default function App() {
   // Exportação CSV
   const exportarCSV = () => {
     if (dadosFiltrados.length === 0) return;
+    const escaparCSV = (valor: unknown) => `"${String(valor ?? '').replace(/"/g, '""')}"`;
     const headers = ['IDENTIFICAÇÃO / FROTA', 'TIPO / CATEGORIA', 'STATUS', 'LOCAL / OBS'];
     const rows = dadosFiltrados.map(item => {
       const isPatio = item._origem === 'PATIO' || abaAtiva === 'patio';
       return [
-        `"${isPatio ? item.bem : getValor(item, ['FROTA', 'frota'])}"`,
-        `"${isPatio ? item.categoria : getValor(item, ['TIPO', 'tipo'])}"`,
-        `"${isPatio ? item.status : getValor(item, ['STATUS', 'status'])}"`,
-        `"${isPatio ? (item.observacao || '') : getValor(item, ['LOCALIZAÇÃO', 'LOCALIZACAO'])}"`
+        escaparCSV(isPatio ? item.bem : getValor(item, ['FROTA', 'frota'])),
+        escaparCSV(isPatio ? item.categoria : getValor(item, ['TIPO', 'tipo'])),
+        escaparCSV(isPatio ? item.status : getValor(item, ['STATUS', 'status'])),
+        escaparCSV(isPatio ? (item.observacao || '') : getValor(item, ['LOCALIZAÇÃO', 'LOCALIZACAO']))
       ];
     });
 
-    const csvContent = [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const csvContent = [headers.map(escaparCSV).join(','), ...rows.map(e => e.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -302,6 +310,7 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -319,7 +328,7 @@ export default function App() {
             </div>
           </div>
 
-          <nav className="space-y-1.5">
+          <nav aria-label="Seções do painel" className="space-y-1.5">
             <button 
               onClick={() => setAbaAtiva('dashboard')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
@@ -368,7 +377,22 @@ export default function App() {
       </aside>
 
       {/* Conteúdo Principal */}
-      <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+      <main className="flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
+        {erroCarregamento && (
+          <div
+            className="flex items-start justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+            role="alert"
+          >
+            <span>Falha ao sincronizar os dados: {erroCarregamento}</span>
+            <button
+              type="button"
+              onClick={carregarDados}
+              className="shrink-0 font-bold underline underline-offset-2"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        )}
         {/* Topbar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white border border-slate-200 p-4 rounded-2xl shadow-sm gap-4">
           <div>
@@ -636,6 +660,7 @@ export default function App() {
               <button
                 onClick={() => setPagina(p => Math.max(p - 1, 1))}
                 disabled={pagina === 1}
+                aria-label="Página anterior"
                 className="p-2 bg-white border border-slate-300 rounded-lg disabled:opacity-30 hover:bg-slate-100 text-slate-800 transition"
               >
                 <ChevronLeft size={16} />
@@ -643,6 +668,7 @@ export default function App() {
               <button
                 onClick={() => setPagina(p => Math.min(p + 1, totalPaginas))}
                 disabled={pagina === totalPaginas}
+                aria-label="Próxima página"
                 className="p-2 bg-white border border-slate-300 rounded-lg disabled:opacity-30 hover:bg-slate-100 text-slate-800 transition"
               >
                 <ChevronRight size={16} />
@@ -655,12 +681,22 @@ export default function App() {
       {/* Modal de Cadastro */}
       {modalAberto && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-center items-center p-4 z-50">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div
+            aria-labelledby="cadastro-titulo"
+            aria-modal="true"
+            className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+            role="dialog"
+          >
             <div className="flex justify-between items-center p-4 border-b border-slate-200 bg-slate-50">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+              <h3 id="cadastro-titulo" className="text-sm font-black text-slate-900 flex items-center gap-2">
                 <PlusCircle size={18} className="text-blue-700" /> Cadastrar Novo Equipamento
               </h3>
-              <button onClick={() => setModalAberto(false)} className="text-slate-400 hover:text-slate-800 transition">
+              <button
+                type="button"
+                aria-label="Fechar cadastro"
+                onClick={() => setModalAberto(false)}
+                className="text-slate-400 hover:text-slate-800 transition"
+              >
                 <X size={18} />
               </button>
             </div>
