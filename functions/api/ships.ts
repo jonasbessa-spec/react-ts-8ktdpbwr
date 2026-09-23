@@ -12,7 +12,7 @@ interface ShipForecast {
 }
 
 const DEFAULT_SOURCE =
-  'http://s2gpr.sefaz.ce.gov.br/licita-web/paginas/licita/PublicacaoList.seam';
+  'http://sic-tos.complexodopecem.br/sictossite/pesquisa.aspx?WCI=relEmitirLineUpExt_002';
 const ALLOWED_BERTHS = new Set([5, 6, 7, 8]);
 
 const clean = (value: string) =>
@@ -78,4 +78,3 @@ export async function onRequestGet(context: { request: Request; env: Env }) {
     );
   }
 }
-
