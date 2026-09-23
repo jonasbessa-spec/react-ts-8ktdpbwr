@@ -14,7 +14,15 @@ Este projeto usa React, TypeScript e Vite. **Nao abra o arquivo `index.html` dir
 npm install
 ```
 
-4. Crie o arquivo `.env` a partir do `.env.example` e preencha as variaveis do Supabase.
+4. Crie o arquivo `.env` a partir do `.env.example` e preencha as variaveis do Supabase. A URL e a chave precisam ser do mesmo projeto:
+
+   - abra o projeto no Supabase
+   - entre em `Settings > API`
+   - copie a chave pública `anon` ou `publishable`
+   - não use uma chave `service_role` no navegador
+   - salve em `VITE_SUPABASE_ANON_KEY` e reinicie o Vite
+
+   Se a tela mostrar `Supabase rejeitou a chave (HTTP 401)`, a aplicação está funcionando, mas a chave configurada foi rejeitada pelo Supabase.
 5. Inicie o Vite:
 
 ```bash

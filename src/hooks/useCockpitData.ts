@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase, supabaseConfigured } from '../lib/supabase';
+import { getSupabaseErrorMessage, supabase, supabaseConfigured } from '../lib/supabase';
 
 export interface PranchaKPI {
   operacao_id: string;
@@ -52,7 +52,7 @@ export function useCockpitData() {
       setPranchaData((pranchaResult.data ?? []) as PranchaKPI[]);
       setFrotaData((frotaResult.data ?? []) as FrotaKPI[]);
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Não foi possível carregar os indicadores.';
+      const message = getSupabaseErrorMessage(cause, 'Não foi possível carregar os indicadores.');
       setError(message);
     } finally {
       setLoading(false);

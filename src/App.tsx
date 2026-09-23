@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from './lib/supabase';
+import { getSupabaseErrorMessage, supabase, supabaseConfigured } from './lib/supabase';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -64,7 +64,7 @@ export default function App() {
     setLoading(true);
     setErroCarregamento(null);
 
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    if (!supabaseConfigured) {
       setErroCarregamento('Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente.');
       setLoading(false);
       return;
@@ -84,7 +84,7 @@ export default function App() {
       if (resSR.data) setReboques(resSR.data);
       if (resPatio.data) setEquipamentosPatio(resPatio.data);
     } catch (cause) {
-      const message = cause instanceof Error ? cause.message : 'Não foi possível sincronizar os equipamentos.';
+      const message = getSupabaseErrorMessage(cause, 'Não foi possível sincronizar os equipamentos.');
       console.error('Erro na sincronização:', cause);
       setErroCarregamento(message);
     } finally {
@@ -96,7 +96,7 @@ export default function App() {
   useEffect(() => {
     carregarDados();
 
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    if (!supabaseConfigured) {
       return;
     }
 
