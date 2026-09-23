@@ -51,3 +51,49 @@ Para testar a versao de producao localmente:
 npm run build
 npm run preview
 ```
+
+## Publicar no Cloudflare Pages
+
+O projeto pode ser publicado gratuitamente no Cloudflare Pages sem alterar o
+código-fonte. A conta Cloudflare é necessária para criar o projeto e guardar
+as variáveis de ambiente; não coloque o arquivo `.env` no GitHub.
+
+1. Crie uma conta em https://dash.cloudflare.com/sign-up ou entre em uma conta existente.
+2. No painel, abra **Workers & Pages > Create application > Pages > Connect to Git**.
+3. Autorize o GitHub e selecione `jonasbessa-spec/react-ts-8ktdpbwr`.
+4. Use estas configurações:
+
+   - **Production branch:** `main`
+   - **Framework preset:** `Vite`
+   - **Build command:** `npm run build`
+   - **Build output directory:** `dist`
+   - **Node.js version:** `20` ou superior
+
+5. Em **Environment variables**, adicione as duas variáveis abaixo para
+   **Production** e **Preview**:
+
+```text
+VITE_SUPABASE_URL=https://niwfaytctobvihlukzep.supabase.co
+VITE_SUPABASE_ANON_KEY=<sua-chave-anon-ou-publishable>
+```
+
+Não acrescente `/rest/v1/` à URL e não use a chave `service_role`.
+6. Clique em **Save and Deploy**. Cada novo push na `main` acionará um novo
+deploy automaticamente.
+
+Depois do primeiro deploy, teste o endereço `*.pages.dev` e confirme que os
+indicadores carregam dados. Se aparecer uma mensagem de configuração inválida,
+revise as variáveis no ambiente do Cloudflare e use **Retry deployment**.
+
+### Publicação pelo terminal (opcional)
+
+Também é possível usar o Wrangler, depois de autenticar no Cloudflare:
+
+```bash
+npx wrangler login
+npm run build
+npx wrangler pages deploy dist --project-name <nome-do-projeto>
+```
+
+O login abre uma página do Cloudflare para autorização. Não informe tokens ou
+senhas no terminal, no GitHub ou no arquivo `.env`.
