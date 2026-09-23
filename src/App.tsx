@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getSupabaseErrorMessage, supabase, supabaseConfigured } from './lib/supabase';
+import PlanejamentoOperacional from './components/PlanejamentoOperacional';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -441,6 +442,7 @@ export default function App() {
         {/* MÓDULO GERENCIAL: Prontidão para Operação de Navio */}
         {abaAtiva === 'dashboard' && (
           <div className="space-y-6">
+            <PlanejamentoOperacional />
             {/* Status de Prontidão do Berço */}
             <div className="bg-blue-900 text-white p-5 rounded-2xl border border-blue-800 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex items-center gap-4">
