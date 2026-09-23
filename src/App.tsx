@@ -3,6 +3,7 @@ import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigEr
 import PlanejamentoOperacional from './components/PlanejamentoOperacional';
 import ExecutiveOverview from './components/ExecutiveOverview';
 import ExecutiveOperations from './components/ExecutiveOperations';
+import ShipBerthForecast from './components/ShipBerthForecast';
 import { 
   LayoutDashboard, 
   Truck, 
@@ -461,6 +462,7 @@ export default function App() {
               turno={turno}
             />
             <ExecutiveOperations />
+            <ShipBerthForecast />
             <PlanejamentoOperacional />
             {/* Status de Prontidão do Berço */}
             <div className="bg-blue-900 text-white p-5 rounded-2xl border border-blue-800 shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
