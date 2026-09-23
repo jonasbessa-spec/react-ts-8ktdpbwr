@@ -63,6 +63,13 @@ export default function App() {
   const carregarDados = async () => {
     setLoading(true);
     setErroCarregamento(null);
+
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      setErroCarregamento('Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const [resCM, resSR, resPatio] = await Promise.all([
         supabase.from('cm').select('*'),
@@ -88,6 +95,10 @@ export default function App() {
   // Carregamento Inicial + Assinatura de Canais Realtime
   useEffect(() => {
     carregarDados();
+
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      return;
+    }
 
     // Inscrição em tempo real para refletir inputs dos líderes no PWA
     const canalCM = supabase
