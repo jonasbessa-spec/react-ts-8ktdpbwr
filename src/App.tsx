@@ -33,7 +33,8 @@ import {
 
 function DashboardApp() {
   const { session, user, role, canWrite, guestMode, signOut, exitGuestMode } = useAuth();
-  const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'navios' | 'planejamento' | 'cm' | 'sr' | 'patio'>('dashboard');
+  const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'navios' | 'planejamento' | 'frotas'>('dashboard');
+  const [frotaTab, setFrotaTab] = useState<'cm' | 'sr' | 'patio'>('cm');
   const [menuAberto, setMenuAberto] = useState(false);
   const [periodo, setPeriodo] = useState('hoje');
 
@@ -280,9 +281,9 @@ function DashboardApp() {
       return bateBusca && bateStatus && bateCategoria;
     };
 
-    if (abaAtiva === 'cm') return cavalos.filter(item => aplicarFiltros(item, false));
-    if (abaAtiva === 'sr') return reboques.filter(item => aplicarFiltros(item, false));
-    if (abaAtiva === 'patio') return equipamentosPatio.filter(item => aplicarFiltros(item, true));
+    if (abaAtiva === 'frotas' && frotaTab === 'cm') return cavalos.filter(item => aplicarFiltros(item, false));
+    if (abaAtiva === 'frotas' && frotaTab === 'sr') return reboques.filter(item => aplicarFiltros(item, false));
+    if (abaAtiva === 'frotas' && frotaTab === 'patio') return equipamentosPatio.filter(item => aplicarFiltros(item, true));
 
     return [
       ...cavalos.map(c => ({ ...c, _origem: 'CM' })),
@@ -290,7 +291,7 @@ function DashboardApp() {
       ...equipamentosPatio.map(p => ({ ...p, _origem: 'PATIO' }))
     ].filter(item => aplicarFiltros(item, item._origem === 'PATIO'));
 
-  }, [abaAtiva, cavalos, reboques, equipamentosPatio, filtros]);
+  }, [abaAtiva, frotaTab, cavalos, reboques, equipamentosPatio, filtros]);
 
   // Lógica de Paginação
   const totalPaginas = Math.ceil(dadosFiltrados.length / itensPorPagina) || 1;
@@ -305,7 +306,7 @@ function DashboardApp() {
     const escaparCSV = (valor: unknown) => `"${String(valor ?? '').replace(/"/g, '""')}"`;
     const headers = ['IDENTIFICAÇÃO / FROTA', 'TIPO / CATEGORIA', 'STATUS', 'LOCAL / OBS'];
     const rows = dadosFiltrados.map(item => {
-      const isPatio = item._origem === 'PATIO' || abaAtiva === 'patio';
+      const isPatio = item._origem === 'PATIO' || frotaTab === 'patio';
       return [
         escaparCSV(isPatio ? item.bem : getValor(item, ['FROTA', 'frota'])),
         escaparCSV(isPatio ? item.categoria : getValor(item, ['TIPO', 'tipo'])),
@@ -319,7 +320,7 @@ function DashboardApp() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `relatorio_pecem_${abaAtiva}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute('download', `relatorio_pecem_${frotaTab}_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -351,25 +352,11 @@ function DashboardApp() {
             <button onClick={() => { setAbaAtiva('navios'); setMenuAberto(false); }} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'navios' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}><div className="flex items-center gap-3"><Ship size={16} /> Navios e Lineup</div></button>
             <button onClick={() => { setAbaAtiva('planejamento'); setMenuAberto(false); }} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'planejamento' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}><div className="flex items-center gap-3"><Users size={16} /> Colaboradores e Escalas</div></button>
             <button
-              onClick={() => { setAbaAtiva('cm'); setMenuAberto(false); }}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'cm' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
+              onClick={() => { setAbaAtiva('frotas'); setMenuAberto(false); }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'frotas' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
-              <div className="flex items-center gap-3"><Truck size={16} /> Cavalos Mecânicos</div>
-              <span className="bg-blue-950 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalCM}</span>
-            </button>
-            <button
-              onClick={() => { setAbaAtiva('sr'); setMenuAberto(false); }}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'sr' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
-            >
-              <div className="flex items-center gap-3"><Layers size={16} /> Semirreboques</div>
-              <span className="bg-blue-950 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalSR}</span>
-            </button>
-            <button
-              onClick={() => { setAbaAtiva('patio'); setMenuAberto(false); }}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'patio' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
-            >
-              <div className="flex items-center gap-3"><Wrench size={16} /> Equipamentos Pátio</div>
-              <span className="bg-blue-950 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalPatio}</span>
+              <div className="flex items-center gap-3"><Truck size={16} /> Equipamentos e Frotas</div>
+              <span className="bg-blue-950 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalCM + totalSR + totalPatio}</span>
             </button>
           </nav>
         </div>
@@ -419,9 +406,7 @@ function DashboardApp() {
               <h2 className="text-xl font-extrabold text-slate-900">
                 {abaAtiva === 'dashboard' ? 'Dashboard executivo - Porto do Pecém' :
                  abaAtiva === 'navios' ? 'Navios e Lineup · Berços 05–08' :
-                 abaAtiva === 'planejamento' ? 'Colaboradores e Escalas' :
-                 abaAtiva === 'cm' ? 'Gestão de Cavalos Mecânicos (CM)' :
-                 abaAtiva === 'sr' ? 'Gestão de Semirreboques (SR)' : 'Equipamentos e Máquinas de Pátio'}
+                 abaAtiva === 'planejamento' ? 'Colaboradores e Escalas' : 'Equipamentos e Frotas'}
               </h2>
               <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
                 <Radio size={10} className="animate-pulse text-emerald-600" /> Realtime Ativo
@@ -482,7 +467,12 @@ function DashboardApp() {
         {abaAtiva === 'navios' && <ShipBerthForecast />}
         {abaAtiva === 'planejamento' && <ExecutiveOperations />}
 
-        {(['cm', 'sr', 'patio'] as const).includes(abaAtiva as 'cm' | 'sr' | 'patio') && <>{/* Painel de Filtros Integrados */}
+        {abaAtiva === 'frotas' && <>{/* Painel de Filtros Integrados */}
+        <div className="fleet-tabs" role="tablist" aria-label="Submódulos de frotas">
+          <button type="button" className={frotaTab === 'cm' ? 'active' : ''} onClick={() => setFrotaTab('cm')}><Truck size={14} /> Cavalos Mecânicos <b>{totalCM}</b></button>
+          <button type="button" className={frotaTab === 'sr' ? 'active' : ''} onClick={() => setFrotaTab('sr')}><Layers size={14} /> Semirreboques <b>{totalSR}</b></button>
+          <button type="button" className={frotaTab === 'patio' ? 'active' : ''} onClick={() => setFrotaTab('patio')}><Wrench size={14} /> Equipamentos de Pátio <b>{totalPatio}</b></button>
+        </div>
         <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
@@ -529,7 +519,7 @@ function DashboardApp() {
               name="categoria"
               value={filtros.categoria}
               onChange={(e) => setFiltros(p => ({ ...p, categoria: e.target.value }))}
-              disabled={abaAtiva === 'cm' || abaAtiva === 'sr'}
+              disabled={frotaTab !== 'patio'}
               className="bg-slate-50 border border-slate-300 text-slate-900 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:border-blue-600 disabled:opacity-40"
             >
               <option value="TODOS">Todas as Categorias</option>
@@ -579,7 +569,7 @@ function DashboardApp() {
                     </tr>
                   ) : (
                     dadosPaginados.map((item, idx) => {
-                      const isPatio = item._origem === 'PATIO' || abaAtiva === 'patio';
+                      const isPatio = item._origem === 'PATIO' || frotaTab === 'patio';
                       const bemOuFrota = isPatio ? item.bem : getValor(item, ['FROTA', 'frota']);
                       const catOuTipo = isPatio ? item.categoria : getValor(item, ['TIPO', 'tipo']);
                       const locOuSwl = isPatio ? (item.swl || '-') : getValor(item, ['LOCALIZAÇÃO', 'LOCALIZACAO']);
@@ -782,7 +772,7 @@ function DashboardApp() {
         <button type="button" onClick={() => setAbaAtiva('dashboard')} className={abaAtiva === 'dashboard' ? 'active' : ''}><LayoutDashboard size={17} />Dashboard</button>
         <button type="button" onClick={() => setAbaAtiva('navios')} className={abaAtiva === 'navios' ? 'active' : ''}><Ship size={17} />Navios</button>
         <button type="button" onClick={() => setAbaAtiva('planejamento')} className={abaAtiva === 'planejamento' ? 'active' : ''}><Users size={17} />Escalas</button>
-        <button type="button" onClick={() => setAbaAtiva('cm')} className={['cm', 'sr', 'patio'].includes(abaAtiva) ? 'active' : ''}><Truck size={17} />Frotas</button>
+        <button type="button" onClick={() => setAbaAtiva('frotas')} className={abaAtiva === 'frotas' ? 'active' : ''}><Truck size={17} />Frotas</button>
       </nav>
     </div>
   );

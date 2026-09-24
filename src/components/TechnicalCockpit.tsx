@@ -44,7 +44,8 @@ export default function TechnicalCockpit({ period }: { period: string }) {
       if (!active) return;
       const firstError = results.find((result) => result.error)?.error;
       if (firstError) setError(firstError.message);
-      setShips(results[0].data || []); setPeople(results[1].data || []); setEquipment(results[2].data || []); setLoading(false);
+      setShips((results[0].data || []).filter((row) => !/container|porta[- ]?conteiner/i.test(text(row, ['tipo_carga', 'carga']))));
+      setPeople(results[1].data || []); setEquipment(results[2].data || []); setLoading(false);
     };
     load();
     const channel = supabase.channel('technical-cockpit-live').on('postgres_changes', { event: '*', schema: 'public' }, load).subscribe();

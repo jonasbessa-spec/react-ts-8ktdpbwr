@@ -14,7 +14,7 @@ interface ForecastResponse { ships?: Array<Partial<ShipForecast> & { cargaGeral?
 const BERTHS: Array<'TODOS' | Berth> = ['TODOS', '05', '06', '07', '08'];
 const normalizeShip = (ship: Partial<ShipForecast> & { cargaGeral?: string; bercoProgramado?: number }, index: number): ShipForecast => ({
   id: ship.id || `${ship.imo || 'cipp'}-${index}`, nomeNavio: ship.nomeNavio || 'Navio não informado', imo: ship.imo || 'Não informado', mmsi: ship.mmsi || '',
-  tipoCarga: ship.tipoCarga || ship.cargaGeral || 'Carga Geral', bercoProgramado: String(ship.bercoProgramado || '05').padStart(2, '0') as Berth,
+  tipoCarga: ship.tipoCarga || ship.cargaGeral || 'Carga Geral', bercoProgramado: String(ship.bercoProgramado || '').padStart(2, '0') as Berth,
   status: ship.status || 'PROGRAMADO', eta: ship.eta || 'Não informado', etd: ship.etd || 'Não informado', agenciaMaritima: ship.agenciaMaritima || 'Não informado',
   quantidadeToneladas: Number(ship.quantidadeToneladas || 0), fonteDados: ship.fonteDados || 'CIPP Oficial', lat: Number(ship.lat || 0), lng: Number(ship.lng || 0), velocidadeNos: Number(ship.velocidadeNos || 0)
 });
@@ -33,7 +33,7 @@ export default function ShipBerthForecast() {
       if (!supabaseConfigured) throw new Error('Supabase não configurado.');
       const { data, error: queryError } = await supabase.from('previsao_navios').select('*').in('berco_programado', ['05', '06', '07', '08']).order('eta', { ascending: true });
       if (queryError) throw queryError;
-      setShips((data || []).map((row, index) => normalizeShip({ ...row, nomeNavio: row.nome_navio, tipoCarga: row.tipo_carga, bercoProgramado: row.berco_programado, agenciaMaritima: row.agencia_maritima, quantidadeToneladas: row.quantidade_toneladas, fonteDados: row.fonte_dados, velocidadeNos: row.velocidade_nos }, index)).filter((ship) => !/container|porta[- ]?conteineres/i.test(ship.tipoCarga)));
+      setShips((data || []).map((row, index) => normalizeShip({ ...row, nomeNavio: row.nome_navio, tipoCarga: row.tipo_carga, bercoProgramado: row.berco_programado, agenciaMaritima: row.agencia_maritima, quantidadeToneladas: row.quantidade_toneladas, fonteDados: row.fonte_dados, velocidadeNos: row.velocidade_nos }, index)).filter((ship) => ['05', '06', '07', '08'].includes(ship.bercoProgramado) && !/container|porta[- ]?conteineres/i.test(ship.tipoCarga)));
     } catch (cause) { setShips([]); setError(cause instanceof Error ? cause.message : 'Não foi possível consultar a previsão real.'); } finally { setLoading(false); }
   }, []);
   useEffect(() => {
@@ -48,7 +48,10 @@ export default function ShipBerthForecast() {
     try {
       const response = await fetch('/api/ships', { headers: { Accept: 'application/json' } }); const payload = await response.json() as ForecastResponse;
       if (!response.ok) throw new Error(payload.error || 'A fonte CIPP/AIS está indisponível.');
-      const rows = (payload.ships || []).map((ship, index) => ({ ...normalizeShip(ship, index), nome_navio: normalizeShip(ship, index).nomeNavio, imo: normalizeShip(ship, index).imo, tipo_carga: normalizeShip(ship, index).tipoCarga, berco_programado: normalizeShip(ship, index).bercoProgramado, status: normalizeShip(ship, index).status, eta: normalizeShip(ship, index).eta, etd: normalizeShip(ship, index).etd, fonte_dados: 'CIPP Oficial' })).filter((ship) => !/container|porta[- ]?conteineres/i.test(ship.tipo_carga));
+      const rows = (payload.ships || []).map((ship, index) => {
+        const normalized = normalizeShip(ship, index);
+        return { ...normalized, nome_navio: normalized.nomeNavio, imo: normalized.imo, tipo_carga: normalized.tipoCarga, berco_programado: normalized.bercoProgramado, status: normalized.status, eta: normalized.eta, etd: normalized.etd, fonte_dados: 'CIPP Oficial' };
+      }).filter((ship) => ['05', '06', '07', '08'].includes(ship.berco_programado) && !/container|porta[- ]?conteineres/i.test(ship.tipo_carga));
       const { error: upsertError } = await supabase.from('previsao_navios').upsert(rows, { onConflict: 'imo' });
       if (upsertError) throw upsertError;
       await loadShips();
