@@ -3,6 +3,8 @@ import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigEr
 import ExecutiveOverview from './components/ExecutiveOverview';
 import ExecutiveOperations from './components/ExecutiveOperations';
 import ShipBerthForecast from './components/ShipBerthForecast';
+import LoginScreen from './components/LoginScreen';
+import { useAuth } from './contexts/AuthContext';
 import {
   LayoutDashboard,
   Truck,
@@ -22,11 +24,16 @@ import {
   FilterX,
   Ship,
   Anchor,
-  Activity
+  Activity,
+  Menu,
+  Users,
+  LogOut
 } from 'lucide-react';
 
-export default function App() {
-  const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'cm' | 'sr' | 'patio'>('dashboard');
+function DashboardApp() {
+  const { session, user, role, canWrite, signOut } = useAuth();
+  const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'navios' | 'planejamento' | 'cm' | 'sr' | 'patio'>('dashboard');
+  const [menuAberto, setMenuAberto] = useState(false);
   const [turno, setTurno] = useState('Diurno');
 
   // Estados de dados do Supabase
@@ -36,6 +43,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
   const [modoDemonstracao, setModoDemonstracao] = useState(false);
+
 
   // Modal de Novo Cadastro
   const [modalAberto, setModalAberto] = useState(false);
@@ -159,6 +167,7 @@ export default function App() {
   // Cadastro de novos equipamentos
   const handleCadastrar = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canWrite) return;
     if (!novoItem.codigoOuBem.trim()) {
       alert('Informe a identificação do equipamento.');
       return;
@@ -325,7 +334,7 @@ export default function App() {
   return (
     <div className="app-shell flex min-h-screen bg-slate-100 text-slate-800 font-sans">
       {/* Sidebar - Azul Porto do Pecém */}
-      <aside className="app-sidebar w-64 bg-blue-900 text-white flex flex-col justify-between p-4 shrink-0 shadow-xl">
+      <aside className={`app-sidebar w-64 bg-blue-900 text-white flex flex-col justify-between p-4 shrink-0 shadow-xl ${menuAberto ? 'mobile-open' : ''}`}>
         <div className="space-y-6">
           <div className="flex items-center gap-3 px-2 py-3 border-b border-blue-800">
             <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-md">
@@ -339,27 +348,29 @@ export default function App() {
 
           <nav aria-label="Seções do painel" className="space-y-1.5">
             <button
-              onClick={() => setAbaAtiva('dashboard')}
+              onClick={() => { setAbaAtiva('dashboard'); setMenuAberto(false); }}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'dashboard' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
               <div className="flex items-center gap-3"><LayoutDashboard size={16} /> Painel Gerencial</div>
             </button>
+            <button onClick={() => { setAbaAtiva('navios'); setMenuAberto(false); }} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'navios' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}><div className="flex items-center gap-3"><Ship size={16} /> Navios e Lineup</div></button>
+            <button onClick={() => { setAbaAtiva('planejamento'); setMenuAberto(false); }} className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'planejamento' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}><div className="flex items-center gap-3"><Users size={16} /> Colaboradores e Escalas</div></button>
             <button
-              onClick={() => setAbaAtiva('cm')}
+              onClick={() => { setAbaAtiva('cm'); setMenuAberto(false); }}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'cm' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
               <div className="flex items-center gap-3"><Truck size={16} /> Cavalos Mecânicos</div>
               <span className="bg-blue-950 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalCM}</span>
             </button>
             <button
-              onClick={() => setAbaAtiva('sr')}
+              onClick={() => { setAbaAtiva('sr'); setMenuAberto(false); }}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'sr' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
               <div className="flex items-center gap-3"><Layers size={16} /> Semirreboques</div>
               <span className="bg-blue-950 text-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">{totalSR}</span>
             </button>
             <button
-              onClick={() => setAbaAtiva('patio')}
+              onClick={() => { setAbaAtiva('patio'); setMenuAberto(false); }}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${abaAtiva === 'patio' ? 'bg-blue-600 text-white shadow-md' : 'text-blue-100 hover:bg-blue-800'}`}
             >
               <div className="flex items-center gap-3"><Wrench size={16} /> Equipamentos Pátio</div>
@@ -371,10 +382,13 @@ export default function App() {
         <div className="space-y-3 pt-4 border-t border-blue-800">
           <button
             onClick={() => setModalAberto(true)}
+            disabled={!canWrite}
+            title={canWrite ? 'Cadastrar equipamento' : 'Perfil somente leitura'}
             className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold py-2.5 rounded-xl transition shadow-md"
           >
             <PlusCircle size={16} /> Novo Cadastro
           </button>
+          <div className="sidebar-user"><span>{role}</span><small>{user?.email || 'Modo demonstrativo'}</small><button type="button" onClick={() => signOut()}><LogOut size={13} /> Sair</button></div>
 
           <button
             onClick={carregarDados}
@@ -387,6 +401,7 @@ export default function App() {
 
       {/* Conteúdo Principal */}
       <main className="app-main flex-1 p-4 sm:p-6 space-y-6 overflow-y-auto">
+        <button type="button" className="mobile-menu-button" onClick={() => setMenuAberto(true)} aria-label="Abrir menu"><Menu size={20} /></button>
         {erroCarregamento && (
           <div
             className="flex items-start justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
@@ -407,7 +422,9 @@ export default function App() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-xl font-extrabold text-slate-900">
-                {abaAtiva === 'dashboard' ? 'Planejamento e Controle de Equipamentos - Porto do Pecém' :
+                {abaAtiva === 'dashboard' ? 'Dashboard executivo - Porto do Pecém' :
+                 abaAtiva === 'navios' ? 'Navios e Lineup · Berços 05–08' :
+                 abaAtiva === 'planejamento' ? 'Colaboradores e Escalas' :
                  abaAtiva === 'cm' ? 'Gestão de Cavalos Mecânicos (CM)' :
                  abaAtiva === 'sr' ? 'Gestão de Semirreboques (SR)' : 'Equipamentos e Máquinas de Pátio'}
               </h2>
@@ -453,12 +470,12 @@ export default function App() {
               percPatio={percPatio}
               turno={turno}
             />
-            <ExecutiveOperations />
-            <ShipBerthForecast />
           </div>
         )}
+        {abaAtiva === 'navios' && <ShipBerthForecast />}
+        {abaAtiva === 'planejamento' && <ExecutiveOperations />}
 
-        {/* Painel de Filtros Integrados */}
+        {(['cm', 'sr', 'patio'] as const).includes(abaAtiva as 'cm' | 'sr' | 'patio') && <>{/* Painel de Filtros Integrados */}
         <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
@@ -613,6 +630,7 @@ export default function App() {
             </div>
           </div>
         </div>
+        </>}
       </main>
 
       {/* Modal de Cadastro */}
@@ -753,6 +771,19 @@ export default function App() {
           </div>
         </div>
       )}
+      <nav className="mobile-bottom-nav" aria-label="Navegação rápida">
+        <button type="button" onClick={() => setAbaAtiva('dashboard')} className={abaAtiva === 'dashboard' ? 'active' : ''}><LayoutDashboard size={17} />Dashboard</button>
+        <button type="button" onClick={() => setAbaAtiva('navios')} className={abaAtiva === 'navios' ? 'active' : ''}><Ship size={17} />Navios</button>
+        <button type="button" onClick={() => setAbaAtiva('planejamento')} className={abaAtiva === 'planejamento' ? 'active' : ''}><Users size={17} />Escalas</button>
+        <button type="button" onClick={() => setAbaAtiva('cm')} className={['cm', 'sr', 'patio'].includes(abaAtiva) ? 'active' : ''}><Truck size={17} />Frotas</button>
+      </nav>
     </div>
   );
+}
+
+export default function App() {
+  const { session, loading } = useAuth();
+  if (loading) return <div className="auth-loading"><RefreshCw size={22} className="animate-spin" /> Validando sessão...</div>;
+  if (supabaseConfigured && !session) return <LoginScreen />;
+  return <DashboardApp />;
 }

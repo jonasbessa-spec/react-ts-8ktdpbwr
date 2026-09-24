@@ -49,6 +49,10 @@ body {
 .app-main .hover\:bg-slate-50:hover,
 .app-main .hover\:bg-blue-50\/50:hover { background: rgba(30, 64, 95, .28) !important; }
 .demo-banner { padding: .65rem .8rem; border: 1px solid rgba(251,191,36,.3); border-radius: .65rem; color: #fde68a; background: rgba(120,74,0,.16); font-size: .68rem; }
+.auth-loading { min-height: 100vh; display: grid; place-items: center; gap: .5rem; color: #67e8f9; background: #07111f; font-size: .75rem; }
+.mobile-bottom-nav { display: none; }
+.login-screen { min-height: 100vh; display: grid; place-items: center; padding: 1rem; background: radial-gradient(circle at 50% 0, rgba(14,116,144,.24), transparent 32rem), #07111f; }
+.login-card { width: min(100%, 25rem); padding: 2rem; border: 1px solid rgba(148,163,184,.18); border-radius: 1.25rem; color: #cbd5e1; background: rgba(15,29,47,.92); box-shadow: 0 20px 70px rgba(0,0,0,.25); }.login-brand { display: flex; align-items: center; gap: .7rem; }.login-brand > span { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: .75rem; color: white; background: linear-gradient(135deg,#0891b2,#2563eb); }.login-brand strong,.login-brand small { display: block; }.login-brand strong { color: #f8fafc; font-size: .9rem; }.login-brand small { margin-top: .2rem; color: #67e8f9; font-size: .62rem; }.login-card h1 { margin: 2rem 0 .35rem; color: #f8fafc; font-size: 1.35rem; }.login-card > p { margin: 0 0 1.2rem; color: #94a3b8; font-size: .7rem; }.login-card form { display: grid; gap: .9rem; }.login-card label { display: grid; gap: .35rem; color: #94a3b8; font-size: .65rem; font-weight: 800; }.login-card input { width: 100%; box-sizing: border-box; padding: .7rem; border: 1px solid rgba(148,163,184,.2); border-radius: .55rem; color: #e2e8f0; background: #09182a; outline: none; }.login-password { position: relative; }.login-password svg { position: absolute; top: .7rem; left: .65rem; color: #64748b; }.login-password input { padding-left: 2rem; }.login-card button[type=submit] { display: flex; align-items: center; justify-content: center; gap: .4rem; margin-top: .35rem; padding: .7rem; border: 0; border-radius: .55rem; color: white; background: #0891b2; font-size: .7rem; font-weight: 800; }.login-error { display: flex; gap: .4rem; margin-bottom: .8rem; padding: .65rem; border: 1px solid rgba(248,113,113,.3); border-radius: .5rem; color: #fecaca; background: rgba(127,29,29,.2); font-size: .65rem; }.sidebar-user { display: grid; gap: .15rem; padding: .65rem 0; color: #67e8b7; font-size: .62rem; }.sidebar-user small { overflow: hidden; color: #94a3b8; text-overflow: ellipsis; white-space: nowrap; }.sidebar-user button { display: inline-flex; align-items: center; gap: .3rem; width: fit-content; padding: .2rem 0; border: 0; color: #cbd5e1; background: transparent; font-size: .62rem; }.mobile-menu-button { display: none; }
 
 .executive-overview { color: #e2e8f0; }
 .executive-hero {
@@ -138,14 +142,15 @@ body {
 @media (max-width: 640px) {
   .executive-kpi-grid, .chart-grid, .lineup-calendar-grid { grid-template-columns: 1fr; }
   .chart-wide { grid-column: auto; }
-  .app-sidebar { width: 4.3rem !important; padding: .6rem !important; }
-  .app-sidebar h1, .app-sidebar p, .app-sidebar nav button > div + span, .app-sidebar nav button > div { font-size: 0 !important; }
-  .app-sidebar nav button > div svg { margin: auto; }
-  .app-sidebar nav button { justify-content: center; padding: .75rem .4rem; }
-  .app-sidebar nav button > span { display: none; }
-  .app-sidebar > div:first-child > div:first-child { justify-content: center; border: 0; }
-  .app-sidebar > div:last-child button { padding: .7rem .25rem; font-size: 0; }
-  .app-sidebar > div:last-child button svg { margin: auto; }
+  .app-sidebar { position: fixed; inset: 0 auto 0 0; z-index: 80; width: min(18rem, 88vw) !important; padding: 1rem !important; transform: translateX(-105%); transition: transform .2s ease; }
+  .app-sidebar.mobile-open { transform: translateX(0); }
+  .app-sidebar h1, .app-sidebar p { font-size: initial !important; }
+  .mobile-menu-button { position: fixed; top: .8rem; left: .8rem; z-index: 70; display: grid; place-items: center; width: 2.3rem; height: 2.3rem; border: 1px solid rgba(148,163,184,.2); border-radius: .6rem; color: #cbd5e1; background: #0f1d2f; }
+  .app-topbar { padding-left: 3.4rem !important; }
+  .mobile-bottom-nav { position: fixed; right: .6rem; bottom: .6rem; left: .6rem; z-index: 60; display: grid; grid-template-columns: repeat(4, 1fr); padding: .35rem; border: 1px solid rgba(148,163,184,.2); border-radius: .8rem; background: rgba(9,24,42,.96); box-shadow: 0 10px 30px rgba(0,0,0,.3); }
+  .mobile-bottom-nav button { display: grid; justify-items: center; gap: .15rem; padding: .4rem .1rem; border: 0; border-radius: .5rem; color: #94a3b8; background: transparent; font-size: .52rem; font-weight: 800; }
+  .mobile-bottom-nav button.active { color: #cffafe; background: rgba(8,145,178,.25); }
+  .app-main { padding-bottom: 5rem !important; }
   .executive-hero { align-items: flex-start; flex-direction: column; }
   .executive-hero-status { width: 100%; }
   .executive-grid { grid-template-columns: 1fr; }

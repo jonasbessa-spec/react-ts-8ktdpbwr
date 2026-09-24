@@ -18,4 +18,4 @@ create index if not exists previsao_navios_pecem_berco_eta_idx on public.previsa
 create index if not exists previsao_navios_pecem_status_idx on public.previsao_navios_pecem (status);
 alter table public.previsao_navios_pecem enable row level security;
 drop policy if exists "Previsão pública de navios é legível" on public.previsao_navios_pecem;
-create policy "Previsão pública de navios é legível" on public.previsao_navios_pecem for select using (true);
+create policy "Previsão autenticada de navios é legível" on public.previsao_navios_pecem for select to authenticated using (true);
