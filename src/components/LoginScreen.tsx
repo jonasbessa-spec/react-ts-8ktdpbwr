@@ -3,7 +3,7 @@ import { Anchor, LockKeyhole, LogIn, RefreshCw, TriangleAlert } from 'lucide-rea
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginScreen() {
-  const { signIn, enterGuestMode } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,7 +27,5 @@ export default function LoginScreen() {
       <label>Senha<div className="login-password"><LockKeyhole size={15} /><input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></div></label>
       <button type="submit" disabled={submitting}>{submitting ? <RefreshCw size={16} className="animate-spin" /> : <LogIn size={16} />} Entrar</button>
     </form>
-    <button type="button" className="guest-access-button" onClick={enterGuestMode}>Acessar sem senha por enquanto</button>
-    <small className="guest-access-note">Acesso temporário somente para consulta. Cadastros, edição e sincronização ficam bloqueados.</small>
   </section></main>;
 }

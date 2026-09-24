@@ -779,8 +779,8 @@ function DashboardApp() {
 }
 
 export default function App() {
-  const { session, loading, guestMode } = useAuth();
+  const { session, loading } = useAuth();
   if (loading) return <div className="auth-loading"><RefreshCw size={22} className="animate-spin" /> Validando sessão...</div>;
-  if (supabaseConfigured && !session && !guestMode) return <LoginScreen />;
+  if (supabaseConfigured && !session) return <LoginScreen />;
   return <DashboardApp />;
 }
