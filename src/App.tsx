@@ -382,7 +382,7 @@ function DashboardApp() {
           >
             <PlusCircle size={16} /> Novo Cadastro
           </button>
-          <div className="sidebar-user"><span>{role}</span><small>{user?.email || 'Modo demonstrativo'}</small><button type="button" onClick={() => signOut()}><LogOut size={13} /> Sair</button></div>
+          <div className="sidebar-user"><span>{role}</span><small>{user?.email || 'Sessão autenticada'}</small><button type="button" onClick={() => signOut()}><LogOut size={13} /> Sair</button></div>
 
           <button
             onClick={carregarDados}
