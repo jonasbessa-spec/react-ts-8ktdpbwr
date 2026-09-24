@@ -23,7 +23,6 @@ interface ExecutiveOverviewProps {
   percCM: number;
   percSR: number;
   percPatio: number;
-  turno: string;
 }
 
 const formatDate = () =>
@@ -45,7 +44,6 @@ export default function ExecutiveOverview({
   percCM,
   percSR,
   percPatio,
-  turno,
 }: ExecutiveOverviewProps) {
   const readiness = Math.round((percCM + percSR + percPatio) / 3);
   const attention = [percCM, percSR, percPatio].filter((value) => value < 80).length;
@@ -61,7 +59,7 @@ export default function ExecutiveOverview({
     <section className="executive-overview" aria-label="Resumo executivo operacional">
       <div className="executive-hero">
         <div>
-          <div className="executive-eyebrow"><span className="live-dot" /> Cockpit executivo <span>•</span> {turno}</div>
+          <div className="executive-eyebrow"><span className="live-dot" /> Cockpit executivo <span>•</span> 24/7</div>
           <h2>Comando operacional do terminal</h2>
           <p>{formatDate()} · visão consolidada de frota, berços e produtividade marítima.</p>
         </div>
