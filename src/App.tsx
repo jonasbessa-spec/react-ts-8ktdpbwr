@@ -3,6 +3,7 @@ import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigEr
 import ExecutiveOverview from './components/ExecutiveOverview';
 import ExecutiveOperations from './components/ExecutiveOperations';
 import ShipBerthForecast from './components/ShipBerthForecast';
+import TechnicalCockpit from './components/TechnicalCockpit';
 import LoginScreen from './components/LoginScreen';
 import { useAuth } from './contexts/AuthContext';
 import {
@@ -34,7 +35,7 @@ function DashboardApp() {
   const { session, user, role, canWrite, guestMode, signOut, exitGuestMode } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'navios' | 'planejamento' | 'cm' | 'sr' | 'patio'>('dashboard');
   const [menuAberto, setMenuAberto] = useState(false);
-  const [turno, setTurno] = useState('Diurno');
+  const [periodo, setPeriodo] = useState('hoje');
 
   // Estados de dados do Supabase
   const [cavalos, setCavalos] = useState<any[]>([]);
@@ -423,7 +424,7 @@ function DashboardApp() {
                  abaAtiva === 'sr' ? 'Gestão de Semirreboques (SR)' : 'Equipamentos e Máquinas de Pátio'}
               </h2>
               <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <Radio size={10} className="animate-pulse text-emerald-600" /> Ao Vivo (Realtime)
+                <Radio size={10} className="animate-pulse text-emerald-600" /> Sinal Realtime Ativo
               </span>
             </div>
             <p className="text-xs text-slate-500 font-semibold mt-0.5">Visão consolidada para produtividade de berço e operações de navio</p>
@@ -437,12 +438,13 @@ function DashboardApp() {
               <Download size={14} /> Exportar CSV
             </button>
             <select
-              value={turno}
-              onChange={(e) => setTurno(e.target.value)}
+              value={periodo}
+              onChange={(e) => setPeriodo(e.target.value)}
               className="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-600"
             >
-              <option value="Diurno">Turno 1 - Diurno</option>
-              <option value="Noturno">Turno 2 - Noturno</option>
+              <option value="hoje">Visão Operacional Hoje</option>
+              <option value="semana">Semana Vigente</option>
+              <option value="mes">Visão Mensal</option>
             </select>
           </div>
         </div>
@@ -461,8 +463,8 @@ function DashboardApp() {
               percCM={percCM}
               percSR={percSR}
               percPatio={percPatio}
-              turno={turno}
             />
+            <TechnicalCockpit period={periodo} />
           </div>
         )}
         {abaAtiva === 'navios' && <ShipBerthForecast />}
