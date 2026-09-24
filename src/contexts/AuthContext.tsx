@@ -9,6 +9,9 @@ interface AuthContextValue {
   role: AppRole;
   loading: boolean;
   canWrite: boolean;
+  guestMode: boolean;
+  enterGuestMode: () => void;
+  exitGuestMode: () => void;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
 }
@@ -24,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(supabaseConfigured);
   const [role, setRole] = useState<AppRole>('viewer');
+  const [guestMode, setGuestMode] = useState(() => localStorage.getItem('pecem_guest_mode') === 'true');
 
   useEffect(() => {
     if (!supabaseConfigured) return;
@@ -55,6 +59,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role,
     loading,
     canWrite: role !== 'viewer',
+    guestMode,
+    enterGuestMode: () => {
+      localStorage.setItem('pecem_guest_mode', 'true');
+      setGuestMode(true);
+    },
+    exitGuestMode: () => {
+      localStorage.removeItem('pecem_guest_mode');
+      setGuestMode(false);
+    },
     signIn: async (email, password) => {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       return { error: error ? new Error(error.message) : null };
@@ -63,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signOut();
       return { error: error ? new Error(error.message) : null };
     }
-  }), [loading, role, session]);
+  }), [guestMode, loading, role, session]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

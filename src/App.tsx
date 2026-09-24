@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 
 function DashboardApp() {
-  const { session, user, role, canWrite, signOut } = useAuth();
+  const { session, user, role, canWrite, guestMode, signOut, exitGuestMode } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'navios' | 'planejamento' | 'cm' | 'sr' | 'patio'>('dashboard');
   const [menuAberto, setMenuAberto] = useState(false);
   const [turno, setTurno] = useState('Diurno');
@@ -382,7 +382,7 @@ function DashboardApp() {
           >
             <PlusCircle size={16} /> Novo Cadastro
           </button>
-          <div className="sidebar-user"><span>{role}</span><small>{user?.email || 'Sessão autenticada'}</small><button type="button" onClick={() => signOut()}><LogOut size={13} /> Sair</button></div>
+          <div className="sidebar-user"><span>{guestMode ? 'visitante · somente leitura' : role}</span><small>{user?.email || 'Acesso temporário sem senha'}</small><button type="button" onClick={() => { if (guestMode) exitGuestMode(); else void signOut(); }}><LogOut size={13} /> Sair</button></div>
 
           <button
             onClick={carregarDados}
@@ -775,8 +775,8 @@ function DashboardApp() {
 }
 
 export default function App() {
-  const { session, loading } = useAuth();
+  const { session, loading, guestMode } = useAuth();
   if (loading) return <div className="auth-loading"><RefreshCw size={22} className="animate-spin" /> Validando sessão...</div>;
-  if (supabaseConfigured && !session) return <LoginScreen />;
+  if (supabaseConfigured && !session && !guestMode) return <LoginScreen />;
   return <DashboardApp />;
 }
