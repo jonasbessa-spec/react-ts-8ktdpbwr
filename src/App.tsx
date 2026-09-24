@@ -424,13 +424,25 @@ function DashboardApp() {
                  abaAtiva === 'sr' ? 'Gestão de Semirreboques (SR)' : 'Equipamentos e Máquinas de Pátio'}
               </h2>
               <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <Radio size={10} className="animate-pulse text-emerald-600" /> Sinal Realtime Ativo
+                <Radio size={10} className="animate-pulse text-emerald-600" /> Realtime Ativo
               </span>
             </div>
             <p className="text-xs text-slate-500 font-semibold mt-0.5">Visão consolidada para produtividade de berço e operações de navio</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-2.5">
+            <div className="topbar-identity" title={user?.email || 'Acesso temporário sem senha'}>
+              <span>{guestMode ? 'VISITANTE' : (user?.email || 'Acesso temporário')}</span>
+              <strong>{guestMode ? 'Somente leitura' : role.toUpperCase()}</strong>
+            </div>
+            <button
+              type="button"
+              onClick={() => { if (guestMode) exitGuestMode(); else void signOut(); }}
+              className="topbar-logout"
+              title="Encerrar sessão"
+            >
+              <LogOut size={14} /> Sair
+            </button>
             <button
               onClick={exportarCSV}
               className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition shadow-sm"
