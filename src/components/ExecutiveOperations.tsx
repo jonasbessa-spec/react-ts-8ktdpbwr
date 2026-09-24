@@ -50,35 +50,9 @@ interface CalendarEvent {
   type: 'navio' | 'manutencao' | 'equipe' | 'diretoria';
 }
 
-const mockShips: ShipRecord[] = [
-  { id: 'mock-msc', name: 'MSC Mediterranean', imo: '9701234', berth: 'Berço 101', cargo: 'Contêineres', status: 'Operando', eta: '06:30', etd: '18:00', pilot: 'A. Oliveira' },
-  { id: 'mock-cma', name: 'CMA CGM Jacarandá', imo: '9856123', berth: 'Berço 102', cargo: 'Granel sólido', status: 'Operando', eta: '08:10', etd: '22:30', pilot: 'R. Nascimento' },
-  { id: 'mock-pacific', name: 'Pacific Horizon', imo: '9438120', berth: 'Berço 3', cargo: 'Placas de aço', status: 'Ao Largo', eta: '20:00', etd: '--', pilot: 'A definir' },
-];
-
-const mockCollaborators: PlanningCollaborator[] = [
-  { id: 'col-1', name: 'Marcos Almeida', registration: 'PEC-1042', shift: 'A', regime: '12x36', status: 'present', area: 'berth-2-containers-apm', extraHours: 2 },
-  { id: 'col-2', name: 'Camila Rodrigues', registration: 'PEC-1188', shift: 'A', regime: '6x1', status: 'present', area: 'yard-gate', extraHours: 0 },
-  { id: 'col-3', name: 'Rafael Sousa', registration: 'PEC-0921', shift: 'B', regime: '12x36', status: 'training', area: 'berth-1-tmg', extraHours: 4 },
-  { id: 'col-4', name: 'Juliana Freitas', registration: 'PEC-1260', shift: 'C', regime: '5x2', status: 'scheduled-day-off', area: 'berth-3-4-general-cargo', extraHours: 0 },
-  { id: 'col-5', name: 'Pedro Lima', registration: 'PEC-1103', shift: 'commercial', regime: 'on-call', status: 'present', area: 'berth-2-containers-apm', extraHours: 7 },
-];
-
-const mockEvents: CalendarEvent[] = [
-  { id: 'evt-1', title: 'Chegada MSC Mediterranean', date: 'Hoje, 06:30', type: 'navio' },
-  { id: 'evt-2', title: 'Inspeção Berço 3', date: 'Hoje, 14:00', type: 'manutencao' },
-  { id: 'evt-3', title: 'Troca de equipe - Turno C', date: 'Hoje, 19:00', type: 'equipe' },
-  { id: 'evt-4', title: 'Comitê executivo operacional', date: 'Amanhã, 09:00', type: 'diretoria' },
-];
-
-const volumeData = [
-  { day: '01', atual: 920, anterior: 790 }, { day: '05', atual: 1080, anterior: 860 },
-  { day: '10', atual: 1240, anterior: 1010 }, { day: '15', atual: 1180, anterior: 1120 },
-  { day: '20', atual: 1390, anterior: 1170 }, { day: '25', atual: 1520, anterior: 1250 },
-  { day: '30', atual: 1680, anterior: 1320 },
-];
-const berthData = [{ berth: 'B. 1', value: 76 }, { berth: 'B. 2', value: 89 }, { berth: 'B. 3', value: 61 }, { berth: 'B. 4', value: 54 }];
-const cargoData = [{ name: 'Contêineres', value: 42, color: '#22d3ee' }, { name: 'Grãos', value: 24, color: '#34d399' }, { name: 'Minério', value: 18, color: '#818cf8' }, { name: 'Aço', value: 11, color: '#fbbf24' }, { name: 'Líquidas', value: 5, color: '#f472b6' }];
+const volumeData: Array<{ day: string; atual: number; anterior: number }> = [];
+const berthData: Array<{ berth: string; value: number }> = [];
+const cargoData: Array<{ name: string; value: number; color: string }> = [];
 const shiftLabel: Record<PlanningCollaborator['shift'], string> = { A: 'Turno A', B: 'Turno B', C: 'Turno C', commercial: 'Comercial' };
 const regimeLabel: Record<PlanningCollaborator['regime'], string> = { '12x36': '12x36', '6x1': '6x1', '5x2': '5x2', 'on-call': 'Sobreaviso' };
 const areaLabel: Record<PlanningCollaborator['area'], string> = { 'berth-1-tmg': 'Berço 1 · TMG', 'berth-2-containers-apm': 'Berço 2 · Contêineres/APM', 'berth-3-4-general-cargo': 'Berços 3/4 · Cargas gerais', 'yard-gate': 'Pátio · GATE' };
@@ -97,11 +71,11 @@ const toRecord = (row: Record<string, unknown>, index: number): ShipRecord => ({
 });
 
 export default function ExecutiveOperations() {
-  const [ships, setShips] = useState<ShipRecord[]>(mockShips);
-  const [collaborators, setCollaborators] = useState<PlanningCollaborator[]>(mockCollaborators);
-  const [events, setEvents] = useState<CalendarEvent[]>(mockEvents);
+  const [ships, setShips] = useState<ShipRecord[]>([]);
+  const [collaborators, setCollaborators] = useState<PlanningCollaborator[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [source, setSource] = useState<'supabase' | 'demo'>('demo');
+  const [source, setSource] = useState<'supabase' | 'empty'>('empty');
   const [filters, setFilters] = useState<PlanningFilters>({ search: '', window: 'today', shift: 'all', regime: 'all', status: 'all', area: 'all' });
   const [selectedShip, setSelectedShip] = useState<ShipRecord | null>(null);
   const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('week');
@@ -140,9 +114,9 @@ export default function ExecutiveOperations() {
             type: (String(row.tipo ?? 'navio') as CalendarEvent['type']),
           })));
         }
-        setSource(shipsResult.data?.length || collaboratorsResult.data?.length ? 'supabase' : 'demo');
+        setSource(shipsResult.data?.length || collaboratorsResult.data?.length ? 'supabase' : 'empty');
       } catch (cause) {
-        if (active) setNotice(`Dados demonstrativos ativos: ${getSupabaseErrorMessage(cause, 'módulos opcionais indisponíveis')}`);
+        if (active) setNotice(getSupabaseErrorMessage(cause, 'Módulos operacionais indisponíveis.'));
       } finally {
         if (active) setLoading(false);
       }
@@ -180,14 +154,14 @@ export default function ExecutiveOperations() {
     <section className="executive-operations" aria-label="Gestão executiva portuária">
       {notice && <div className="module-notice">{notice}<button type="button" onClick={() => setNotice(null)} aria-label="Fechar aviso"><X size={14} /></button></div>}
       <div className="module-heading">
-        <div><span className="module-kicker"><span className="live-dot" /> Módulos executivos {source === 'demo' ? '• modo demonstrativo' : '• dados Supabase'}</span><h2>Visão do gerente de planejamento operacional</h2></div>
+        <div><span className="module-kicker"><span className="live-dot" /> Módulos executivos {source === 'supabase' ? '• dados Supabase' : '• aguardando dados'}</span><h2>Visão do gerente de planejamento operacional</h2></div>
         {loading && <span className="syncing"><Loader2 size={14} className="animate-spin" /> Sincronizando módulos</span>}
       </div>
 
       <div className="executive-kpi-grid">
-        <div><span>Espera média · praticagem</span><strong>42 <small>min</small></strong><em className="kpi-good">-12% vs. período anterior</em></div>
-        <div><span>Prancha média</span><strong>51,5 <small>ton/h</small></strong><em className="kpi-good">+8,4% produtividade</em></div>
-        <div><span>Ocupação dos berços</span><strong>70 <small>%</small></strong><em className="kpi-warn">+4 p.p. no turno</em></div>
+        <div><span>Espera média · praticagem</span><strong>-- <small>min</small></strong><em className="kpi-neutral">Sem dados</em></div>
+        <div><span>Prancha média</span><strong>-- <small>ton/h</small></strong><em className="kpi-neutral">Sem dados</em></div>
+        <div><span>Ocupação dos berços</span><strong>-- <small>%</small></strong><em className="kpi-neutral">Sem dados</em></div>
         <div><span>Navios operando agora</span><strong>{ships.filter((ship) => ship.status === 'Operando').length} <small>/ {ships.length}</small></strong><em className="kpi-neutral">Lineup atualizado</em></div>
       </div>
 

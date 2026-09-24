@@ -42,7 +42,6 @@ function DashboardApp() {
   const [equipamentosPatio, setEquipamentosPatio] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
-  const [modoDemonstracao, setModoDemonstracao] = useState(false);
 
 
   // Modal de Novo Cadastro
@@ -98,18 +97,13 @@ function DashboardApp() {
       if (resCM.data) setCavalos(resCM.data);
       if (resSR.data) setReboques(resSR.data);
       if (resPatio.data) setEquipamentosPatio(resPatio.data);
-      setModoDemonstracao(false);
     } catch (cause) {
       const message = getSupabaseErrorMessage(cause, 'Não foi possível sincronizar os equipamentos.');
       console.error('Erro na sincronização:', cause);
-      const demoCM = Array.from({ length: 25 }, (_, index) => ({ FROTA: `CM-DEMO-${String(index + 1).padStart(2, '0')}`, TIPO: 'VOLVO', STATUS: index === 4 ? 'MANUTENÇÃO' : 'OPERACIONAL', ATIVIDADE: index === 4 ? 'EM REPARO' : 'OPERANDO', LOCALIZAÇÃO: 'PORTO' }));
-      const demoSR = Array.from({ length: 43 }, (_, index) => ({ FROTA: `SR-DEMO-${String(index + 1).padStart(2, '0')}`, TIPO: 'STANDARD', STATUS: index % 7 === 0 ? 'PARADO' : 'OPERACIONAL', ATIVIDADE: index % 7 === 0 ? 'MANUTENÇÃO PREVENTIVA' : 'DISPONÍVEL', LOCALIZAÇÃO: 'PORTO' }));
-      const demoPatio = Array.from({ length: 49 }, (_, index) => ({ id: `patio-demo-${index + 1}`, bem: `BEM-${String(index + 1).padStart(3, '0')}`, categoria: index % 3 === 0 ? 'GUINDASTES' : 'REACH STACKERS', status: index % 5 === 0 ? 'MANUTENÇÃO' : 'DISPONÍVEL', observacao: index % 5 === 0 ? 'Em manutenção preventiva' : 'Pronto para operação', dias_parado: index % 5 === 0 ? 2 : 0 }));
-      setCavalos(demoCM);
-      setReboques(demoSR);
-      setEquipamentosPatio(demoPatio);
-      setModoDemonstracao(true);
-      setErroCarregamento(`Modo demonstração: ${message}`);
+      setCavalos([]);
+      setReboques([]);
+      setEquipamentosPatio([]);
+      setErroCarregamento(message);
     } finally {
       setLoading(false);
     }
@@ -456,7 +450,6 @@ function DashboardApp() {
         {/* MÓDULO GERENCIAL: Prontidão para Operação de Navio */}
         {abaAtiva === 'dashboard' && (
           <div className="space-y-6">
-            {modoDemonstracao && <div className="demo-banner" role="status">Modo demonstração ativo: os indicadores de frota exibidos são exemplos até a atualização da chave anon do Supabase.</div>}
             <ExecutiveOverview
               totalCM={totalCM}
               dispCM={dispCM}

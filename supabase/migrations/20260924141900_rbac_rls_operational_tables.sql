@@ -1,5 +1,5 @@
 -- Execute after creating the operational tables. The role is read from
--- app_metadata.role so it cannot be changed by the client.
+-- the protected profiles table and is never accepted from client payloads.
 create or replace function public.has_operations_write_role()
 returns boolean
 language sql
@@ -7,14 +7,17 @@ stable
 security invoker
 set search_path = public
 as $$
-  select coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') in ('admin', 'developer');
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role in ('admin', 'developer')
+  );
 $$;
 
 do $$
 declare
   table_name text;
 begin
-  foreach table_name in array array['cm', 'sr', 'equipamentos_patio', 'colaboradores', 'previsao_navios_pecem']
+  foreach table_name in array array['cm', 'sr', 'equipamentos_patio', 'colaboradores', 'previsao_navios', 'previsao_navios_pecem']
   loop
     if to_regclass('public.' || table_name) is not null then
       execute format('alter table public.%I enable row level security', table_name);
