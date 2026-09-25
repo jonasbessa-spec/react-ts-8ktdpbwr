@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 
 function DashboardApp() {
-  const { session, user, role, canWrite, guestMode, signOut, exitGuestMode } = useAuth();
+  const { session, user, role, canWrite, signOut } = useAuth();
   const [abaAtiva, setAbaAtiva] = useState<'dashboard' | 'navios' | 'planejamento' | 'frotas'>('dashboard');
   const [frotaTab, setFrotaTab] = useState<'cm' | 'sr' | 'patio'>('cm');
   const [menuAberto, setMenuAberto] = useState(false);
@@ -370,7 +370,7 @@ function DashboardApp() {
           >
             <PlusCircle size={16} /> Novo Cadastro
           </button>
-          <div className="sidebar-user"><span>{guestMode ? 'visitante · somente leitura' : role}</span><small>{user?.email || 'Acesso temporário sem senha'}</small><button type="button" onClick={() => { if (guestMode) exitGuestMode(); else void signOut(); }}><LogOut size={13} /> Sair</button></div>
+          <div className="sidebar-user"><span>{role}</span><small>{user?.email || 'Sessão não identificada'}</small><button type="button" onClick={() => void signOut()}><LogOut size={13} /> Sair</button></div>
 
           <button
             onClick={carregarDados}
@@ -416,13 +416,13 @@ function DashboardApp() {
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2.5">
-            <div className="topbar-identity" title={user?.email || 'Acesso temporário sem senha'}>
-              <span>{guestMode ? 'VISITANTE' : (user?.email || 'Acesso temporário')}</span>
-              <strong>{guestMode ? 'Somente leitura' : role.toUpperCase()}</strong>
+            <div className="topbar-identity" title={user?.email || 'Sessão não identificada'}>
+              <span>{user?.email || 'Sessão não identificada'}</span>
+              <strong>{role.toUpperCase()}</strong>
             </div>
             <button
               type="button"
-              onClick={() => { if (guestMode) exitGuestMode(); else void signOut(); }}
+              onClick={() => void signOut()}
               className="topbar-logout"
               title="Encerrar sessão"
             >
@@ -781,6 +781,14 @@ function DashboardApp() {
 export default function App() {
   const { session, loading } = useAuth();
   if (loading) return <div className="auth-loading"><RefreshCw size={22} className="animate-spin" /> Validando sessão...</div>;
-  if (supabaseConfigured && !session) return <LoginScreen />;
+  if (!supabaseConfigured) {
+    return (
+      <main className="auth-loading" role="alert">
+        <XCircle size={22} />
+        {supabaseConfigError || 'Supabase não configurado. O painel permanece bloqueado.'}
+      </main>
+    );
+  }
+  if (!session) return <LoginScreen />;
   return <DashboardApp />;
 }
