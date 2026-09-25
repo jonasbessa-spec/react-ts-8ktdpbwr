@@ -161,13 +161,31 @@ def extract_cipp(html: str) -> list[LineupRow]:
     return rows
 
 
-def fetch_json_records(url: str | None, params: dict[str, str], timeout: int = 30) -> list[EnrichmentRecord]:
+def fetch_json_records(
+    url: str | None,
+    params: dict[str, str],
+    timeout: int = 30,
+    api_key: str | None = None,
+) -> list[EnrichmentRecord]:
     if not url:
         return []
-    response = requests.get(url, params=params, timeout=timeout)
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+        headers["X-API-Key"] = api_key
+    response = requests.get(url, params=params, headers=headers, timeout=timeout)
     response.raise_for_status()
     payload = response.json()
-    records = payload if isinstance(payload, list) else payload.get("data", payload.get("ships", []))
+    records = (
+        payload
+        if isinstance(payload, list)
+        else payload.get(
+            "data",
+            payload.get("ships", payload.get("vessels", payload.get("results", []))),
+        )
+    )
+    if not isinstance(records, list):
+        raise ValueError("O endpoint de enriquecimento deve retornar uma lista de navios.")
     return [EnrichmentRecord.model_validate(item) for item in records]
 
 
@@ -251,6 +269,7 @@ def run() -> dict[str, int]:
     enrichment = fetch_json_records(
         os.getenv("PECEM_ENRICHMENT_URL"),
         {"port": os.getenv("PECEM_PORT_CODE", "BRPEC")},
+        api_key=os.getenv("PECEM_ENRICHMENT_API_KEY"),
     )
     rows = enrich(rows, enrichment)
     selected = eligible(rows)

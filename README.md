@@ -104,9 +104,21 @@ python scripts/pecem_etl.py
 ```
 
 Para enriquecimento HTTP, configure `PECEM_ENRICHMENT_URL`; o endpoint deve
-retornar uma lista JSON (ou `{ "data": [...] }`) com `nome_navio`, `imo`,
-`duv` e/ou `berco_programado`. Sem esse adapter autorizado, a pipeline não
-inventa IMO; o berço permanece pendente.
+ser um adapter autorizado para PSP/AIS ou para uma API licenciada de dados
+marítimos. Ele deve retornar uma lista JSON (ou `{ "data": [...] }`,
+`{ "ships": [...] }`, `{ "vessels": [...] }` ou `{ "results": [...] }`) com
+`nome_navio`, `imo`, `duv` e/ou `berco_programado`. O código envia
+`port=BRPEC` por padrão. Se o fornecedor exigir autenticação, configure
+`PECEM_ENRICHMENT_API_KEY`; a chave é enviada somente server-side nos headers
+`Authorization: Bearer` e `X-API-Key`.
+
+Clarksons Research e Lloyd's Register são fontes comerciais/licenciadas. A
+contratação, o endpoint e o mapeamento de campos precisam ser confirmados com
+o fornecedor; não use scraping do cadastro público para extração massiva nem
+coloque credenciais no frontend. Depois de obter acesso, publique um pequeno
+adapter interno que converta a resposta licenciada para o contrato acima.
+Sem esse adapter autorizado, a pipeline não inventa IMO; o berço permanece
+pendente.
 
 ### Publicação pelo terminal (opcional)
 
