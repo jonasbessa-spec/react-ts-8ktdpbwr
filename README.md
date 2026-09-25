@@ -89,7 +89,8 @@ revise as variáveis no ambiente do Cloudflare e use **Retry deployment**.
 
 A pipeline Python em `scripts/pecem_etl.py` extrai o Line-Up oficial, cruza
 registros opcionais de PSP/AIS por DUV, IMO ou nome fuzzy e grava somente linhas
-com IMO, ETA, status normalizado e berço 05–08. Contêineres e petroleiros são
+com IMO, ETA e status normalizado. O berço pode ser `NULL` até ser informado
+manualmente ou por lineup posterior. Contêineres e líquidos sem carga projeto são
 descartados. A chave `SUPABASE_SERVICE_ROLE_KEY` é obrigatória apenas no
 processo server-side e nunca deve ser usada no Vite.
 
@@ -105,7 +106,7 @@ python scripts/pecem_etl.py
 Para enriquecimento HTTP, configure `PECEM_ENRICHMENT_URL`; o endpoint deve
 retornar uma lista JSON (ou `{ "data": [...] }`) com `nome_navio`, `imo`,
 `duv` e/ou `berco_programado`. Sem esse adapter autorizado, a pipeline não
-inventa IMO ou berço e não persiste registros incompletos.
+inventa IMO; o berço permanece pendente.
 
 ### Publicação pelo terminal (opcional)
 

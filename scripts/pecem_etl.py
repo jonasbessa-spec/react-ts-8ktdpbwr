@@ -1,7 +1,7 @@
 """ETL configurável do Line-Up Pecém -> Supabase.
 
-A fonte A deve fornecer IMO e berço para que um registro seja persistido.
-PSP/AIS são adapters HTTP opcionais; nenhum dado é inventado quando ausente.
+O berço pode permanecer pendente: ele é preenchido manualmente ou por lineup
+posterior. IMO e ETA continuam obrigatórios para evitar registros ambíguos.
 """
 
 from __future__ import annotations
@@ -16,16 +16,26 @@ from typing import Any, Iterable
 
 import pandas as pd
 import requests
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 from rapidfuzz import fuzz, process
 
 DEFAULT_LINEUP_URL = (
     "https://sic-tos.complexodopecem.com.br/"
     "sictossite/pesquisa.aspx?WCI=relEmitirLineUpExt_002"
 )
-ALLOWED_BERTHS = {"05", "06", "07", "08"}
+ALLOWED_BERTHS = {"01", "02", "03", "04", "05", "06", "07", "08", "10"}
 CONTAINER_PATTERN = re.compile(r"container|cont[eê]iner|porta[-\s]?cont[eê]iner", re.I)
-EXCLUDED_TANKER_PATTERN = re.compile(r"\b(oil|gas|chemical|tanker|petroleiro|tanque)\b", re.I)
+GENERAL_CARGO_PATTERN = re.compile(
+    r"placa|aco|siderurg|breakbulk|general cargo|carga projeto|projeto|"
+    r"bobina|eolic|pa eolic|min[ée]rio|carv[aã]o|hulha|gran[eé]is? secos?|"
+    r"maquina|equipamento|ferro|steel|cement|clinker",
+    re.I,
+)
+LIQUID_BULK_PATTERN = re.compile(
+    r"oil|gas|chemical|tanker|petroleiro|tanque|combust[ií]vel|nafta|"
+    r"gasolina|diesel|metanol|am[oô]nia|[óo]leo",
+    re.I,
+)
 
 
 def norm(value: Any) -> str:
@@ -74,8 +84,9 @@ def normalize_status(value: Any) -> str | None:
 
 
 def normalize_berth(value: Any) -> str | None:
-    match = re.search(r"\b0?([5-8])\b", str(value or ""))
-    return match.group(1).zfill(2) if match else None
+    match = re.search(r"\b0?(10|[1-8])\b", str(value or ""))
+    berth = match.group(1).zfill(2) if match else None
+    return berth if berth in ALLOWED_BERTHS else None
 
 
 class LineupRow(BaseModel):
@@ -186,9 +197,13 @@ def enrich(rows: list[LineupRow], records: list[EnrichmentRecord], threshold: in
 def eligible(rows: list[LineupRow]) -> list[LineupRow]:
     result = []
     for row in rows:
-        if not row.imo or row.berco_programado not in ALLOWED_BERTHS:
+        if not row.imo:
             continue
-        if CONTAINER_PATTERN.search(row.tipo_carga) or EXCLUDED_TANKER_PATTERN.search(row.tipo_carga):
+        if CONTAINER_PATTERN.search(row.tipo_carga):
+            continue
+        if LIQUID_BULK_PATTERN.search(row.tipo_carga) and not re.search(r"carga\s+projeto|project\s+cargo", row.tipo_carga, re.I):
+            continue
+        if not GENERAL_CARGO_PATTERN.search(row.tipo_carga):
             continue
         if not row.status or not row.eta:
             continue

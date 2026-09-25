@@ -4,8 +4,10 @@ import { pathToFileURL } from 'node:url';
 
 export const DEFAULT_SICTOS_URL =
   'https://sic-tos.complexodopecem.com.br/sictossite/pesquisa.aspx?WCI=relEmitirLineUpExt_002';
-const ALLOWED_BERTHS = new Set(['05', '06', '07', '08']);
+const ALLOWED_BERTHS = new Set(['01', '02', '03', '04', '05', '06', '07', '08', '10']);
 const CONTAINER_PATTERN = /container|cont[eê]iner|porta[-\s]?cont[eê]iner/i;
+const GENERAL_CARGO_PATTERN = /placa|aço|siderúrg|breakbulk|general cargo|carga projeto|projeto|bobina|eólic|minério|carvão|hulha|granéis? secos?|máquina|equipamento|ferro|steel|cement|clinker/i;
+const LIQUID_BULK_PATTERN = /oil|gas|chemical|tanker|petroleiro|tanque|combustível|nafta|gasolina|diesel|metanol|amônia|óleo/i;
 
 const normalize = (value = '') =>
   value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
@@ -33,14 +35,15 @@ export function filterAndMapShips(rows) {
     const status = mapStatus(row.status);
     const cargo = String(row.tipoCarga || '').trim();
     const imo = String(row.imo || '').replace(/\D/g, '');
-    if (!row.nomeNavio || !imo || !ALLOWED_BERTHS.has(normalizedBerth) || !status || CONTAINER_PATTERN.test(cargo)) return [];
+    if (!row.nomeNavio || !imo || !status || !GENERAL_CARGO_PATTERN.test(cargo) || CONTAINER_PATTERN.test(cargo)) return [];
+    if (LIQUID_BULK_PATTERN.test(cargo) && !/carga\s+projeto|project\s+cargo/i.test(cargo)) return [];
     const eta = parseDate(row.eta);
     if (!eta) return [];
     return [{
       nome_navio: row.nomeNavio.trim(),
       imo,
       tipo_carga: cargo || 'Carga Geral',
-      berco_programado: normalizedBerth,
+      berco_programado: normalizedBerth || null,
       status,
       eta,
       etd: parseDate(row.etd),
