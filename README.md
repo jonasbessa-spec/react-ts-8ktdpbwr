@@ -85,6 +85,29 @@ Depois do primeiro deploy, teste o endereço `*.pages.dev` e confirme que os
 indicadores carregam dados. Se aparecer uma mensagem de configuração inválida,
 revise as variáveis no ambiente do Cloudflare e use **Retry deployment**.
 
+## ETL de Line-Up e enriquecimento
+
+A pipeline Python em `scripts/pecem_etl.py` extrai o Line-Up oficial, cruza
+registros opcionais de PSP/AIS por DUV, IMO ou nome fuzzy e grava somente linhas
+com IMO, ETA e status normalizado. O berço pode ser `NULL` até ser informado
+manualmente ou por lineup posterior. Contêineres e líquidos sem carga projeto são
+descartados. A chave `SUPABASE_SERVICE_ROLE_KEY` é obrigatória apenas no
+processo server-side e nunca deve ser usada no Vite.
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r scripts\requirements-pecem.txt
+$env:SUPABASE_URL="https://seu-projeto.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY="chave-server-side"
+python scripts/pecem_etl.py
+```
+
+Para enriquecimento HTTP, configure `PECEM_ENRICHMENT_URL`; o endpoint deve
+retornar uma lista JSON (ou `{ "data": [...] }`) com `nome_navio`, `imo`,
+`duv` e/ou `berco_programado`. Sem esse adapter autorizado, a pipeline não
+inventa IMO; o berço permanece pendente.
+
 ### Publicação pelo terminal (opcional)
 
 Também é possível usar o Wrangler, depois de autenticar no Cloudflare:
