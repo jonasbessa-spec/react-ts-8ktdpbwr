@@ -1,197 +1,224 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase';
 import { 
   Truck, 
-  Layers, 
-  Wrench, 
-  CheckCircle2, 
   AlertTriangle, 
   Clock, 
-  Search, 
-  RefreshCw,
+  CheckCircle, 
+  PlusCircle, 
+  Send,
   Ship,
-  MapPin,
-  Send
+  RefreshCw
 } from 'lucide-react';
+import { supabase } from './lib/supabase';
+
+interface Operacao {
+  id: string;
+  nome_navio: string;
+  berco_codigo: string;
+}
+
+interface Equipamento {
+  id: string;
+  codigo: string;
+  tag: string;
+  nome: string;
+}
 
 export default function AppLider() {
-  const [categoria, setCategoria] = useState<'cm' | 'sr' | 'patio'>('cm');
-  const [itens, setItens] = useState<any[]>([]);
-  const [busca, setBusca] = useState('');
+  const [operacoes, setOperacoes] = useState<Operacao[]>([]);
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [loading, setLoading] = useState(false);
-  const [atualizandoId, setAtualizandoId] = useState<string | number | null>(null);
+  const [sucesso, setSucesso] = useState(false);
 
-  // Carregar dados conforme aba
-  const carregarDados = async () => {
-    setLoading(true);
-    try {
-      const tabela = categoria === 'cm' ? 'cm' : categoria === 'sr' ? 'sr' : 'equipamentos_patio';
-      const { data, error } = await supabase.from(tabela).select('*');
-      if (error) throw error;
-      setItens(data || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Formulário de Registo de Interrupção/Gargalo
+  const [selectedOperacao, setSelectedOperacao] = useState('');
+  const [selectedEquipamento, setSelectedEquipamento] = useState('');
+  const [tipoParada, setTipoParada] = useState('manutencao_equipamento');
+  const [descricao, setDescricao] = useState('');
 
+  // Carregar dados iniciais
   useEffect(() => {
     carregarDados();
-  }, [categoria]);
+  }, []);
 
-  // Alterar Status em Tempo Real
-  const alterarStatus = async (item: any, novoStatus: string, novaAtividade?: string) => {
-    setAtualizandoId(item.id);
-    const tabela = categoria === 'cm' ? 'cm' : categoria === 'sr' ? 'sr' : 'equipamentos_patio';
+  const carregarDados = async () => {
+    // Buscar operações ativas nos berços
+    const { data: opData } = await supabase
+      .from('view_kpi_prancha_operacional')
+      .select('operacao_id, nome_navio, berco_codigo');
+    
+    // Buscar equipamentos
+    const { data: eqData } = await supabase
+      .from('equipamentos')
+      .select('id, codigo, tag, nome');
 
-    let payload: Record<string, any> = {};
-
-    if (categoria === 'patio') {
-      payload = { status: novoStatus, observacao: novaAtividade || item.observacao };
-    } else {
-      payload = { STATUS: novoStatus, ATIVIDADE: novaAtividade || 'OPERANDO' };
+    if (opData) {
+      setOperacoes(opData.map(o => ({
+        id: o.operacao_id,
+        nome_navio: o.nome_navio,
+        berco_codigo: o.berco_codigo
+      })));
     }
+    if (eqData) setEquipamentos(eqData);
+  };
 
-    try {
-      const { error } = await supabase.from(tabela).update(payload).eq('id', item.id);
-      if (error) throw error;
-      
-      // Atualiza localmente para resposta visual instantânea
-      setItens(prev => prev.map(i => i.id === item.id ? { ...i, ...payload } : i));
-    } catch (err: any) {
-      alert(`Erro ao atualizar: ${err.message}`);
-    } finally {
-      setAtualizandoId(null);
+  const handleRegistarParada = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOperacao) return alert('Selecione uma operação/navio');
+
+    setLoading(true);
+    setSucesso(false);
+
+    const { error } = await supabase
+      .from('interrupcoes_operacionais')
+      .insert([
+        {
+          operacao_id: selectedOperacao,
+          equipamento_id: selectedEquipamento || null,
+          tipo: tipoParada,
+          inicio: new Date().toISOString(),
+          descricao: descricao
+        }
+      ]);
+
+    setLoading(false);
+
+    if (error) {
+      alert('Erro ao registrar interrupção: ' + error.message);
+    } else {
+      setSucesso(true);
+      setDescricao('');
+      setSelectedEquipamento('');
+      setTimeout(() => setSucesso(false), 3000);
     }
   };
 
-  const itensFiltrados = itens.filter(i => {
-    const term = busca.toLowerCase();
-    const iden = String(i.bem || i.FROTA || i.frota || '').toLowerCase();
-    return !term || iden.includes(term);
-  });
-
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans max-w-md mx-auto">
-      {/* Header Fixo de Campo */}
-      <header className="bg-blue-900 p-4 border-b border-blue-800 sticky top-0 z-20 flex justify-between items-center shadow-lg">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 max-w-md mx-auto pb-24">
+      
+      {/* CABEÇALHO MOBILE */}
+      <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-6">
         <div className="flex items-center gap-2">
-          <div className="bg-blue-600 p-2 rounded-lg text-white">
-            <Ship size={20} />
+          <div className="p-2 bg-blue-600/20 text-blue-400 rounded-lg">
+            <Truck className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="font-black text-sm text-white">PE CÉM - CAMPO</h1>
-            <p className="text-[10px] text-blue-200 font-semibold">Apontamento de Turno</p>
+            <h1 className="text-lg font-bold text-white">Apontamento de Campo</h1>
+            <p className="text-xs text-slate-400">Operações Portuárias & Frota</p>
           </div>
         </div>
-
         <button 
           onClick={carregarDados}
-          className="p-2 bg-blue-800 rounded-lg text-blue-200 active:scale-95 transition"
+          className="p-2 bg-slate-900 text-slate-400 hover:text-white rounded-lg border border-slate-800"
         >
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
-        </button>
-      </header>
-
-      {/* Seletor de Categoria Mobile */}
-      <div className="grid grid-cols-3 gap-1 p-2 bg-slate-950 border-b border-slate-800">
-        <button
-          onClick={() => setCategoria('cm')}
-          className={`py-3 rounded-xl font-extrabold text-xs flex flex-col items-center gap-1 transition ${categoria === 'cm' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 bg-slate-900'}`}
-        >
-          <Truck size={18} /> Cavalos
-        </button>
-        <button
-          onClick={() => setCategoria('sr')}
-          className={`py-3 rounded-xl font-extrabold text-xs flex flex-col items-center gap-1 transition ${categoria === 'sr' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 bg-slate-900'}`}
-        >
-          <Layers size={18} /> Reboques
-        </button>
-        <button
-          onClick={() => setCategoria('patio')}
-          className={`py-3 rounded-xl font-extrabold text-xs flex flex-col items-center gap-1 transition ${categoria === 'patio' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 bg-slate-900'}`}
-        >
-          <Wrench size={18} /> Pátio
+          <RefreshCw className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Barra de Busca Rápida */}
-      <div className="p-3 bg-slate-900">
-        <div className="flex items-center bg-slate-800 border border-slate-700 rounded-xl px-3">
-          <Search size={18} className="text-slate-400" />
-          <input
-            id="busca-equipamento"
-            name="busca"
-            type="text"
-            placeholder="Digitar número da frota..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            className="w-full bg-transparent p-3 text-sm text-white font-bold outline-none placeholder-slate-500"
-          />
+      {/* FORMULÁRIO DE REGISTO RÁPIDO */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4 shadow-xl">
+        <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm border-b border-slate-800 pb-2">
+          <AlertTriangle className="h-4 w-4" />
+          Registrar Parada / Interrupção
         </div>
+
+        {sucesso && (
+          <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-xs flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            Parada registrada com sucesso no Supabase!
+          </div>
+        )}
+
+        <form onSubmit={handleRegistarParada} className="space-y-4">
+          
+          {/* SELEÇÃO DO NAVIO/OPERAÇÃO */}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Navio / Berço *
+            </label>
+            <select
+              value={selectedOperacao}
+              onChange={(e) => setSelectedOperacao(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+              required
+            >
+              <option value="">Selecione a Operação...</option>
+              {operacoes.map((op) => (
+                <option key={op.id} value={op.id}>
+                  {op.berco_codigo} - {op.nome_navio}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* TIPO DE PARADA */}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Motivo da Parada *
+            </label>
+            <select
+              value={tipoParada}
+              onChange={(e) => setTipoParada(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="manutencao_equipamento">Manutenção de Equipamento</option>
+              <option value="clima">Condições Climáticas (Chuva/Vento)</option>
+              <option value="troca_turno">Troca de Turno / Refeição</option>
+              <option value="aguardando_carga">Aguardando Carga / Pátio</option>
+              <option value="outros">Outros Motivos</option>
+            </select>
+          </div>
+
+          {/* EQUIPAMENTO ENVOLVIDO (OPCIONAL) */}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Equipamento Afetado (Opcional)
+            </label>
+            <select
+              value={selectedEquipamento}
+              onChange={(e) => setSelectedEquipamento(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="">Nenhum / Geral da Operação</option>
+              {equipamentos.map((eq) => (
+                <option key={eq.id} value={eq.id}>
+                  {eq.codigo || eq.tag} - {eq.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* OBSERVAÇÃO / DESCRIÇÃO */}
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Observações
+            </label>
+            <textarea
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              rows={3}
+              placeholder="Descreva brevemente o motivo..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-blue-500 resize-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-lg text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30 disabled:opacity-50"
+          >
+            {loading ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                Registar Parada Agora
+              </>
+            )}
+          </button>
+        </form>
       </div>
 
-      {/* Lista de Equipamentos para Ação Rápida */}
-      <main className="flex-1 p-3 space-y-3 overflow-y-auto">
-        {loading && itens.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 text-xs font-bold">Carregando lista de equipamentos...</div>
-        ) : itensFiltrados.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 text-xs font-bold">Nenhum equipamento encontrado.</div>
-        ) : (
-          itensFiltrados.map((item) => {
-            const identificacao = item.bem || item.FROTA || item.frota;
-            const statusAtual = String(item.status || item.STATUS || '').toUpperCase();
-            const eManutencao = statusAtual.includes('MANUTENÇÃO') || statusAtual.includes('PARADO');
-            const emProcesso = atualizandoId === item.id;
-
-            return (
-              <div 
-                key={item.id} 
-                className={`bg-slate-800 border rounded-2xl p-4 space-y-3 transition shadow-md ${eManutencao ? 'border-rose-900/60 bg-rose-950/10' : 'border-slate-700'}`}
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-lg font-black text-white tracking-wider">{identificacao}</span>
-                    <p className="text-xs text-slate-400 font-semibold">{item.categoria || item.TIPO || 'EQUIPAMENTO'}</p>
-                  </div>
-
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${!eManutencao ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
-                    {!eManutencao ? <CheckCircle2 size={12} /> : <AlertTriangle size={12} />}
-                    {statusAtual}
-                  </span>
-                </div>
-
-                {/* Botões Grandes para Apontamento de Turno com Touch */}
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <button
-                    disabled={emProcesso || (!eManutencao && statusAtual === 'OPERACIONAL')}
-                    onClick={() => alterarStatus(item, categoria === 'patio' ? 'DISPONÍVEL' : 'OPERACIONAL', 'EM OPERAÇÃO')}
-                    className="py-3 bg-emerald-600 active:bg-emerald-700 disabled:opacity-30 text-white rounded-xl text-xs font-black flex justify-center items-center gap-1.5 shadow-md"
-                  >
-                    {emProcesso ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                    LIBERAR / OPERAÇÃO
-                  </button>
-
-                  <button
-                    disabled={emProcesso || eManutencao}
-                    onClick={() => alterarStatus(item, 'MANUTENÇÃO', 'CORRETIVA')}
-                    className="py-3 bg-rose-600 active:bg-rose-700 disabled:opacity-30 text-white rounded-xl text-xs font-black flex justify-center items-center gap-1.5 shadow-md"
-                  >
-                    {emProcesso ? <RefreshCw size={14} className="animate-spin" /> : <AlertTriangle size={16} />}
-                    PARAR / MANUTENÇÃO
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </main>
-
-      {/* Footer Fixo */}
-      <footer className="p-3 bg-slate-950 border-t border-slate-800 text-center text-[10px] text-slate-500 font-bold">
-        Porto do Pecém • Gestão em Tempo Real
-      </footer>
     </div>
   );
 }
