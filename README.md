@@ -6,12 +6,12 @@ Este projeto usa React, TypeScript e Vite. **Nao abra o arquivo `index.html` dir
 
 `Expected a JavaScript-or-Wasm module script ... application/octet-stream`
 
-1. Instale o Node.js LTS pelo site oficial: https://nodejs.org/
+1. Instale o Node.js 22.9 ou superior pelo site oficial: https://nodejs.org/
 2. Abra o terminal na pasta deste projeto.
 3. Instale as dependencias:
 
 ```bash
-npm install
+npm ci
 ```
 
 4. Crie o arquivo `.env` a partir do `.env.example` e preencha as variaveis do Supabase. A URL e a chave precisam ser do mesmo projeto:
@@ -45,6 +45,14 @@ npm run build
 npm audit --audit-level=high
 ```
 
+O Vite já fornece atualização automática durante `npm run dev`; não é
+necessário adicionar `nodemon` a este frontend. Para executar localmente o
+scraper Node, preencha as variáveis server-side no `.env` e rode:
+
+```bash
+npm run scrape:sictos
+```
+
 Para testar a versao de producao localmente:
 
 ```bash
@@ -67,7 +75,7 @@ as variáveis de ambiente; não coloque o arquivo `.env` no GitHub.
    - **Framework preset:** `Vite`
    - **Build command:** `npm run build`
    - **Build output directory:** `dist`
-   - **Node.js version:** `20` ou superior
+   - **Node.js version:** `22.9` ou superior
 
 5. Em **Environment variables**, adicione as duas variáveis abaixo para
    **Production** e **Preview**:

@@ -7,8 +7,8 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Validação de configuração
 export const supabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
+  supabaseUrl &&
+  supabaseAnonKey &&
   supabaseUrl.startsWith('https://')
 );
 
@@ -23,10 +23,24 @@ export const supabase = createClient(
 );
 
 // Helper para formatação de mensagens de erro
-export function getSupabaseErrorMessage(error: any): string {
-  if (!error) return 'Erro desconhecido no banco de dados.';
-  if (typeof error === 'string') return error;
-  if (error.message) return error.message;
-  if (error.error_description) return error.error_description;
-  return JSON.stringify(error);
+export function getSupabaseErrorMessage(
+  error: unknown,
+  fallback = 'Erro desconhecido no banco de dados.',
+): string {
+  if (typeof error === 'string' && error) return error;
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'object' && error !== null) {
+    const details = error as { message?: unknown; error_description?: unknown };
+    if (typeof details.message === 'string' && details.message) return details.message;
+    if (typeof details.error_description === 'string' && details.error_description) {
+      return details.error_description;
+    }
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized && serialized !== '{}') return serialized;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
 }

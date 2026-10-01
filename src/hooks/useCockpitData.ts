@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
-import { getSupabaseErrorMessage, supabase, supabaseConfigured, supabaseConfigError } from '../lib/supabase';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '../lib/supabase';
 
 export interface PranchaKPI {
   operacao_id: string;
   nome_navio: string;
-  imo_number?: string;
+  imo_number: string | null;
   berco_codigo: string;
   tipo_operacao: string;
   tipo_carga: string;
@@ -15,70 +15,108 @@ export interface PranchaKPI {
 }
 
 export interface FrotaKPI {
-  equipamento_id: string;
   tag: string;
   categoria: string;
   status_atual: string;
   minutos_parado_hoje: number;
 }
 
+interface CockpitData {
+  pranchaData: PranchaKPI[];
+  frotaData: FrotaKPI[];
+  loading: boolean;
+  error: string | null;
+}
+
+type DatabaseRow = Record<string, unknown>;
+
+const readText = (row: DatabaseRow, keys: string[], fallback = ''): string => {
+  for (const key of keys) {
+    const value = row[key];
+    if (value !== undefined && value !== null && value !== '') return String(value);
+  }
+  return fallback;
+};
+
+const readNumber = (row: DatabaseRow, keys: string[]): number => {
+  for (const key of keys) {
+    const value = Number(row[key]);
+    if (Number.isFinite(value)) return value;
+  }
+  return 0;
+};
+
 export function useCockpitData() {
-  const [pranchaData, setPranchaData] = useState<PranchaKPI[]>([]);
-  const [frotaData, setFrotaData] = useState<FrotaKPI[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<CockpitData>({
+    pranchaData: [],
+    frotaData: [],
+    loading: true,
+    error: null
+  });
+  const mounted = useRef(false);
+  const requestId = useRef(0);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    if (!supabaseConfigured) {
-      setPranchaData([]);
-      setFrotaData([]);
-      setError(
-        supabaseConfigError ||
-        'Supabase não configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no ambiente.'
-      );
-      setLoading(false);
-      return;
+  const refetch = useCallback(async () => {
+    const currentRequest = ++requestId.current;
+    if (mounted.current) {
+      setData((current) => ({ ...current, loading: true, error: null }));
     }
-
     try {
-      const [pranchaResult, frotaResult] = await Promise.all([
+      const [operationsResult, boardResult, cmResult, srResult, yardResult] = await Promise.all([
+        supabase.from('operacoes_navio').select('*'),
         supabase.from('view_kpi_prancha_operacional').select('*'),
-        supabase.from('view_kpi_disponibilidade_frota').select('*')
+        supabase.from('cm').select('*'),
+        supabase.from('sr').select('*'),
+        supabase.from('equipamentos_patio').select('*'),
       ]);
+      const error = operationsResult.error || boardResult.error || cmResult.error || srResult.error || yardResult.error;
+      if (error) throw error;
+      if (!mounted.current || currentRequest !== requestId.current) return;
 
-      if (pranchaResult.error) throw pranchaResult.error;
-      if (frotaResult.error) throw frotaResult.error;
-
-      setPranchaData((pranchaResult.data ?? []) as PranchaKPI[]);
-      setFrotaData((frotaResult.data ?? []) as FrotaKPI[]);
+      const rawOperations = (boardResult.data?.length ? boardResult.data : operationsResult.data || []) as DatabaseRow[];
+      const rawFleet = [
+        ...((cmResult.data || []) as DatabaseRow[]).map((row) => ({ ...row, _category: 'Cavalo mecânico' })),
+        ...((srResult.data || []) as DatabaseRow[]).map((row) => ({ ...row, _category: 'Semirreboque' })),
+        ...((yardResult.data || []) as DatabaseRow[]).map((row) => ({ ...row, _category: 'Equipamento de pátio' })),
+      ];
+      setData({
+        pranchaData: rawOperations.map((row, index) => ({
+          operacao_id: readText(row, ['operacao_id', 'id'], `operacao-${index}`),
+          nome_navio: readText(row, ['nome_navio', 'navio'], 'Navio sem identificação'),
+          imo_number: readText(row, ['imo_number', 'imo']) || null,
+          berco_codigo: readText(row, ['berco_codigo', 'berco'], 'Pendente'),
+          tipo_operacao: readText(row, ['tipo_operacao', 'operacao'], 'Não informado'),
+          tipo_carga: readText(row, ['tipo_carga', 'carga'], 'Não informado'),
+          meta_prancha_ton_h: readNumber(row, ['meta_prancha_ton_h']),
+          prancha_realizada_ton_h: readNumber(row, ['prancha_realizada_ton_h', 'prancha_real']),
+          percentual_concluido: readNumber(row, ['percentual_concluido']),
+          horas_operadas: readNumber(row, ['horas_operadas']),
+        })),
+        frotaData: rawFleet.map((row) => ({
+          tag: readText(row, ['tag', 'FROTA', 'frota', 'bem', 'codigo'], 'Sem identificação'),
+          categoria: readText(row, ['categoria', '_category'], 'Equipamento'),
+          status_atual: readText(row, ['status_atual', 'STATUS', 'status'], 'desconhecido').toLowerCase(),
+          minutos_parado_hoje: readNumber(row, ['minutos_parado_hoje', 'minutos_parado', 'dias_parado']),
+        })),
+        loading: false,
+        error: null,
+      });
     } catch (cause) {
-      const message = getSupabaseErrorMessage(cause, 'Não foi possível carregar os indicadores.');
-      setError(message);
-    } finally {
-      setLoading(false);
+      if (!mounted.current || currentRequest !== requestId.current) return;
+      const message = cause instanceof Error ? cause.message : 'Não foi possível carregar os dados do cockpit.';
+      console.error('Erro no useCockpitData:', cause);
+      setData((current) => ({ ...current, loading: false, error: message }));
     }
   }, []);
 
   useEffect(() => {
-    fetchData();
-
-    if (!supabaseConfigured) {
-      return;
-    }
-
-    const channel = supabase
-      .channel('cockpit-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'operacoes_navio' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'interrupcoes_operacionais' }, () => fetchData())
-      .subscribe();
-
+    mounted.current = true;
+    void refetch();
     return () => {
-      supabase.removeChannel(channel);
+      mounted.current = false;
+      requestId.current += 1;
     };
-  }, [fetchData]);
+  }, [refetch]);
 
-  return { pranchaData, frotaData, loading, error, refetch: fetchData };
+  return { ...data, refetch };
 }

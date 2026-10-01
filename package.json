@@ -3,13 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.9.0"
+  },
   "scripts": {
     "dev": "vite",
     "start": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "scrape:sictos": "node scripts/scrape-sictos.mjs"
+    "scrape:sictos": "node --env-file-if-exists=.env scripts/scrape-sictos.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.0",
@@ -19,7 +22,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^3.10.1",
-    "tailwind-merge": "^3.0.1"
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",

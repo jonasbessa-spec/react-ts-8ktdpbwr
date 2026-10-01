@@ -1,6 +1,6 @@
 {
-  "short_name": "Pecém Ops",
-  "name": "Porto do Pecém - Apontamento Operacional",
+  "short_name": "Líder Porto",
+  "name": "Porto do Pecém - Apontamento de Campo",
   "icons": [
     {
       "src": "favicon.ico",
@@ -8,9 +8,9 @@
       "type": "image/x-icon"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "background_color": "#0b0f19",
+  "theme_color": "#2563eb",
   "display": "standalone",
-  "theme_color": "#1e3a8a",
-  "background_color": "#0f172a",
   "orientation": "portrait"
 }
