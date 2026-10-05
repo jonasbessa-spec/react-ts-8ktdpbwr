@@ -4,14 +4,16 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.9.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "dev": "vite",
     "start": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test functions/api/ships.test.ts",
     "preview": "vite preview",
+    "puppeteer:install-browser": "puppeteer browsers install chrome",
     "scrape:sictos": "node --env-file-if-exists=.env scripts/scrape-sictos.mjs"
   },
   "dependencies": {

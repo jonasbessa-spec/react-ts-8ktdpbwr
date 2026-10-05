@@ -1,5 +1,7 @@
 import puppeteer from 'puppeteer';
 import { createClient } from '@supabase/supabase-js';
+import { access } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const DEFAULT_SICTOS_URL =
@@ -80,12 +82,33 @@ export async function runSicTosScraper({
   executablePath = process.env.PUPPETEER_EXECUTABLE_PATH,
 } = {}) {
   if (!supabaseUrl || !serviceRoleKey) throw new Error('SUPABASE_URL/VITE_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios.');
-  const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const browser = await puppeteer.launch({
-    headless: true,
-    ...(executablePath ? { executablePath } : {}),
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-  });
+  const normalizedSupabaseUrl = supabaseUrl.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+  const parsedSupabaseUrl = new URL(normalizedSupabaseUrl);
+  if (parsedSupabaseUrl.protocol !== 'https:' || parsedSupabaseUrl.pathname !== '/') {
+    throw new Error('SUPABASE_URL deve ser a URL raiz HTTPS do projeto, sem /rest/v1.');
+  }
+
+  const configuredExecutablePath = executablePath?.trim();
+  const browserExecutablePath = configuredExecutablePath ? resolve(configuredExecutablePath) : undefined;
+  if (browserExecutablePath) {
+    try {
+      await access(browserExecutablePath);
+    } catch {
+      throw new Error(`PUPPETEER_EXECUTABLE_PATH não existe ou não pode ser lido: ${browserExecutablePath}`);
+    }
+  }
+
+  const supabase = createClient(normalizedSupabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      ...(browserExecutablePath ? { executablePath: browserExecutablePath } : {}),
+      ...(process.platform === 'linux' ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] } : {}),
+    });
+  } catch (cause) {
+    throw new Error('Falha ao iniciar o Chrome do Puppeteer. Execute `npm run puppeteer:install-browser` e tente novamente.', { cause });
+  }
   try {
     const page = await browser.newPage();
     await page.goto(sourceUrl, { waitUntil: 'networkidle2', timeout: 60000 });
