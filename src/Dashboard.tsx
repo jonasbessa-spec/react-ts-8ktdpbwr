@@ -4,21 +4,40 @@ import { getDadosIntegrados, ResumoOperacional } from './lib/frotasService';
 export function Dashboard() {
   const [dados, setDados] = useState<ResumoOperacional | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     async function loadAll() {
       setLoading(true);
-      const res = await getDadosIntegrados();
-      setDados(res);
-      setLoading(false);
+      setError(null);
+      try {
+        const res = await getDadosIntegrados();
+        if (active) setDados(res);
+      } catch (cause) {
+        if (active) {
+          setError(cause instanceof Error ? cause.message : 'Não foi possível carregar os dados operacionais.');
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
     }
-    loadAll();
+    void loadAll();
+    return () => { active = false; };
   }, []);
 
   if (loading) {
     return (
       <div className="p-8 bg-[#0b0f19] text-slate-300 min-h-screen">
         Conectando ao Supabase e carregando frotas, colaboradores e pranchas...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 bg-[#0b0f19] text-rose-300 min-h-screen" role="alert">
+        Falha ao carregar o resumo operacional: {error}
       </div>
     );
   }

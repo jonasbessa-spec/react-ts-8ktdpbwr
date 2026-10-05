@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 
+type DatabaseRow = Record<string, unknown>;
+
 export interface Equipamento {
   id: string;
   codigo_bem: string;
@@ -10,64 +12,97 @@ export interface Equipamento {
   turno?: string;
 }
 
+export interface ResumoOperacional {
+  equipamentos: {
+    semirreboquesTotal: number;
+    cavalosTotal: number;
+    listaSemirreboques: DatabaseRow[];
+  };
+  staff: {
+    emTurno: number;
+    totalColaboradores: number;
+  };
+  operacoes: {
+    pranchaMedia: number;
+  };
+}
+
+export async function getDadosIntegrados(): Promise<ResumoOperacional> {
+  const [cmRes, srRes, staffRes, operationsRes, boardRes] = await Promise.all([
+    supabase.from('cm').select('*'),
+    supabase.from('sr').select('*'),
+    supabase.from('colaboradores').select('*'),
+    supabase.from('operacoes_navio').select('*'),
+    supabase.from('view_kpi_prancha_operacional').select('*'),
+  ]);
+
+  const error = cmRes.error || srRes.error || staffRes.error || operationsRes.error || boardRes.error;
+  if (error) throw error;
+
+  const operations = boardRes.data?.length ? boardRes.data : operationsRes.data || [];
+  const rates = operations
+    .map((row) => Number(row.prancha_realizada_ton_h ?? row.prancha_real ?? 0))
+    .filter(Number.isFinite);
+  const presentStatuses = new Set(['presente', 'present', 'em turno', 'operando']);
+  const staffOnDuty = (staffRes.data || []).filter((row) =>
+    presentStatuses.has(String(row.status || '').trim().toLowerCase()),
+  ).length;
+
+  return {
+    equipamentos: {
+      semirreboquesTotal: srRes.data?.length || 0,
+      cavalosTotal: cmRes.data?.length || 0,
+      listaSemirreboques: srRes.data || [],
+    },
+    staff: {
+      emTurno: staffOnDuty,
+      totalColaboradores: staffRes.data?.length || 0,
+    },
+    operacoes: {
+      pranchaMedia: rates.length
+        ? Number((rates.reduce((total, rate) => total + rate, 0) / rates.length).toFixed(1))
+        : 0,
+    },
+  };
+}
+
 export const getEquipamentos = async (): Promise<Equipamento[]> => {
-  try {
-    const [cmRes, srRes, patioRes] = await Promise.all([
-      supabase.from('cm').select('*'),
-      supabase.from('sr').select('*'),
-      supabase.from('equipamentos_patio').select('*')
-    ]);
+  const [cmRes, srRes, patioRes] = await Promise.all([
+    supabase.from('cm').select('*'),
+    supabase.from('sr').select('*'),
+    supabase.from('equipamentos_patio').select('*')
+  ]);
 
-    const lista: Equipamento[] = [];
+  const error = cmRes.error || srRes.error || patioRes.error;
+  if (error) throw error;
 
-    // Mapeia Semirreboques (ex: SR10000, SR10005)
-    if (srRes.data) {
-      srRes.data.forEach((item: any) => {
-        lista.push({
-          id: item.id || item.FROTA || Math.random().toString(),
-          codigo_bem: item.FROTA || 'SR',
-          descricao: item.TIPO || 'Semirreboque',
-          tipo_equipamento: 'semirreboques',
-          status: (item.STATUS || '').toLowerCase().includes('manut') ? 'manutencao' : 'disponivel',
-          localizacao: item.LOCALIZACAO || 'PORTO',
-          turno: 'Turno 1 - Diurno'
-        });
-      });
-    }
+  const mapEquipment = (
+    rows: DatabaseRow[],
+    type: Equipamento['tipo_equipamento'],
+    defaultCode: string,
+    defaultDescription: string,
+  ): Equipamento[] => rows.map((item, index) => {
+    const status = String(item.STATUS ?? item.status ?? '').toLowerCase();
+    const rawCode = item.FROTA ?? item.frota ?? item.codigo ?? item.bem;
+    const code = String(rawCode ?? defaultCode);
+    const normalizedStatus = status.includes('manut') || status.includes('parado')
+      ? 'manutencao'
+      : status.includes('uso') || status.includes('operando')
+        ? 'em_uso'
+        : 'disponivel';
+    return {
+      id: String(item.id ?? rawCode ?? `${type}-${index}`),
+      codigo_bem: code,
+      descricao: String(item.TIPO ?? item.tipo ?? item.MODELO ?? item.categoria ?? defaultDescription),
+      tipo_equipamento: type,
+      status: normalizedStatus,
+      localizacao: String(item.LOCALIZACAO ?? item.localizacao ?? 'PORTO'),
+    };
+  });
 
-    // Mapeia Cavalos Mecânicos (CM)
-    if (cmRes.data) {
-      cmRes.data.forEach((item: any) => {
-        lista.push({
-          id: item.id || item.FROTA || Math.random().toString(),
-          codigo_bem: item.FROTA || item.codigo || 'CM',
-          descricao: item.TIPO || item.MODELO || 'Cavalo Mecânico',
-          tipo_equipamento: 'cavalos',
-          status: (item.STATUS || '').toLowerCase().includes('manut') ? 'manutencao' : 'disponivel',
-          localizacao: item.LOCALIZACAO || 'PORTO',
-          turno: 'Turno 1 - Diurno'
-        });
-      });
-    }
-
-    // Mapeia Equipamentos de Pátio
-    if (patioRes.data) {
-      patioRes.data.forEach((item: any) => {
-        lista.push({
-          id: item.id || item.FROTA || Math.random().toString(),
-          codigo_bem: item.FROTA || item.codigo || 'EQP',
-          descricao: item.TIPO || 'Equipamento Pátio',
-          tipo_equipamento: 'patio',
-          status: (item.STATUS || '').toLowerCase().includes('manut') ? 'manutencao' : 'disponivel',
-          localizacao: item.LOCALIZACAO || 'PÁTIO',
-          turno: 'Turno 1 - Diurno'
-        });
-      });
-    }
-
-    return lista;
-  } catch (err) {
-    console.error("Erro ao carregar dados do Supabase:", err);
-    return [];
-  }
+  return [
+    ...mapEquipment((srRes.data || []) as DatabaseRow[], 'semirreboques', 'SR', 'Semirreboque'),
+    ...mapEquipment((cmRes.data || []) as DatabaseRow[], 'cavalos', 'CM', 'Cavalo Mecânico'),
+    ...mapEquipment((patioRes.data || []) as DatabaseRow[], 'patio', 'EQP', 'Equipamento Pátio'),
+  ];
 };
