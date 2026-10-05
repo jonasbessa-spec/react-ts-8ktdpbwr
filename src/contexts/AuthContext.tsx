@@ -28,25 +28,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!supabaseConfigured) return;
     let active = true;
-    supabase.auth.getSession().then(async ({ data }) => {
+    let hasAuthEvent = false;
+    let sessionRevision = 0;
+
+    const applySession = async (nextSession: Session | null) => {
+      const revision = ++sessionRevision;
       if (!active) return;
-      setSession(data.session);
-      if (data.session?.user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.session.user.id).maybeSingle();
-        if (active && (profile?.role === 'admin' || profile?.role === 'developer')) setRole(profile.role);
-      }
-      setLoading(false);
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
       setSession(nextSession);
-      if (!nextSession) setRole('viewer');
-      else {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', nextSession.user.id).maybeSingle();
-        setRole(profile?.role === 'admin' || profile?.role === 'developer' ? profile.role : 'viewer');
+      setRole('viewer');
+      setLoading(Boolean(nextSession));
+
+      if (!nextSession) {
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', nextSession.user.id)
+          .maybeSingle();
+        if (error) throw error;
+        if (active && revision === sessionRevision) {
+          setRole(profile?.role === 'admin' || profile?.role === 'developer' ? profile.role : 'viewer');
+          setLoading(false);
+        }
+      } catch (cause) {
+        console.error('Não foi possível carregar o perfil de acesso; a sessão permanecerá somente leitura.', cause);
+        if (active && revision === sessionRevision) {
+          setRole('viewer');
+          setLoading(false);
+        }
+      }
+    };
+
+    supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!hasAuthEvent) return applySession(data.session);
+      })
+      .catch((cause) => {
+        console.error('Não foi possível recuperar a sessão Supabase.', cause);
+        if (active && !hasAuthEvent) {
+          setSession(null);
+          setRole('viewer');
+          setLoading(false);
+        }
+      });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      // Query the profile after Supabase releases its internal auth lock.
+      hasAuthEvent = true;
+      setTimeout(() => { void applySession(nextSession); }, 0);
     });
-    return () => { active = false; listener.subscription.unsubscribe(); };
+
+    return () => {
+      active = false;
+      sessionRevision += 1;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({

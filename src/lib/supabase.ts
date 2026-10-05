@@ -2,18 +2,25 @@ import { createClient } from '@supabase/supabase-js';
 
 // Sanitização da URL removendo barras extras no final
 const rawUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseUrl = rawUrl.replace(/\/+$/, '');
+const supabaseUrl = rawUrl.trim().replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const parsedSupabaseUrl = (() => {
+  try {
+    return new URL(supabaseUrl);
+  } catch {
+    return null;
+  }
+})();
 
 // Validação de configuração
 export const supabaseConfigured = Boolean(
-  supabaseUrl &&
-  supabaseAnonKey &&
-  supabaseUrl.startsWith('https://')
+  parsedSupabaseUrl?.protocol === 'https:' &&
+  (parsedSupabaseUrl.pathname === '' || parsedSupabaseUrl.pathname === '/') &&
+  supabaseAnonKey
 );
 
 export const supabaseConfigError = !supabaseConfigured
-  ? 'Variáveis de ambiente VITE_SUPABASE_URL ou VITE_SUPABASE_ANON_KEY ausentes ou inválidas.'
+  ? 'Configure VITE_SUPABASE_URL com a URL raiz HTTPS do projeto (sem /rest/v1) e VITE_SUPABASE_ANON_KEY.'
   : null;
 
 // Cliente Supabase

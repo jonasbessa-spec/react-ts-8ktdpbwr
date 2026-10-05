@@ -6,7 +6,7 @@ Este projeto usa React, TypeScript e Vite. **Nao abra o arquivo `index.html` dir
 
 `Expected a JavaScript-or-Wasm module script ... application/octet-stream`
 
-1. Instale o Node.js 22.9 ou superior pelo site oficial: https://nodejs.org/
+1. Instale o Node.js 24 ou superior pelo site oficial: https://nodejs.org/
 2. Abra o terminal na pasta deste projeto.
 3. Instale as dependencias:
 
@@ -45,6 +45,24 @@ npm run build
 npm audit --audit-level=high
 ```
 
+### Windows PowerShell
+
+Use `npm.cmd` if PowerShell blocks `npm.ps1` under the current execution policy.
+Install the Puppeteer-managed Chrome once before scraping:
+
+```powershell
+npm.cmd ci
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+npm.cmd run puppeteer:install-browser
+npm.cmd run typecheck
+npm.cmd run build
+npm.cmd run scrape:sictos
+```
+
+The scraper writes eligible records to Supabase. Configure the service-role key
+only in the local, ignored `.env` file or CI secrets. Supabase URL values should
+be the project root URL, not a `/rest/v1` endpoint.
+
 O Vite já fornece atualização automática durante `npm run dev`; não é
 necessário adicionar `nodemon` a este frontend. Para executar localmente o
 scraper Node, preencha as variáveis server-side no `.env` e rode:
@@ -75,7 +93,7 @@ as variáveis de ambiente; não coloque o arquivo `.env` no GitHub.
    - **Framework preset:** `Vite`
    - **Build command:** `npm run build`
    - **Build output directory:** `dist`
-   - **Node.js version:** `22.9` ou superior
+   - **Node.js version:** `24` ou superior
 
 5. Em **Environment variables**, adicione as duas variáveis abaixo para
    **Production** e **Preview**:
