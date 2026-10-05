@@ -1,5 +1,22 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseConfigured, supabaseConfigError, getSupabaseErrorMessage } from '../lib/supabase';
+
+export interface PranchaKPI {
+  operacao_id?: string;
+  nome_navio?: string;
+  prancha_realizada_ton_h?: number;
+  meta_prancha_ton_h?: number;
+  percentual_concluido?: number;
+  status?: string;
+  [key: string]: any;
+}
+
+export interface FrotaKPI {
+  id?: string;
+  equipamento?: string;
+  status_atual?: string;
+  [key: string]: any;
+}
 
 export function useCockpitData() {
   const [data, setData] = useState<any>({
@@ -12,6 +29,15 @@ export function useCockpitData() {
 
   useEffect(() => {
     async function loadCockpitData() {
+      if (!supabaseConfigured) {
+        setData((prev: any) => ({
+          ...prev,
+          loading: false,
+          error: supabaseConfigError
+        }));
+        return;
+      }
+
       try {
         const [colabRes, opsRes, pranchaRes] = await Promise.all([
           supabase.from('colaboradores').select('*'),
@@ -19,7 +45,11 @@ export function useCockpitData() {
           supabase.from('view_kpi_prancha_operacional').select('*')
         ]);
 
-        const ops = pranchaRes.data && pranchaRes.data.length > 0 
+        if (colabRes.error) {
+          console.error("Erro ao buscar colaboradores:", colabRes.error);
+        }
+
+        const ops = (pranchaRes.data && pranchaRes.data.length > 0)
           ? pranchaRes.data 
           : (opsRes.data || []);
 
@@ -34,11 +64,15 @@ export function useCockpitData() {
           operacoes: ops,
           pranchaMedia: media,
           loading: false,
-          error: null
+          error: colabRes.error ? getSupabaseErrorMessage(colabRes.error) : null
         });
       } catch (err: any) {
         console.error("Erro no useCockpitData:", err);
-        setData((prev: any) => ({ ...prev, loading: false, error: err.message }));
+        setData((prev: any) => ({
+          ...prev,
+          loading: false,
+          error: getSupabaseErrorMessage(err)
+        }));
       }
     }
 
@@ -47,3 +81,5 @@ export function useCockpitData() {
 
   return data;
 }
+
+export { supabaseConfigured, supabaseConfigError, getSupabaseErrorMessage };
