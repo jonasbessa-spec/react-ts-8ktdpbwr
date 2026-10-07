@@ -1,88 +1,92 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
-import { supabase, supabaseConfigured } from '../lib/supabase';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
+import { UserRole, UserProfile } from '../types';
 
-export type AppRole = 'admin' | 'developer' | 'viewer';
-interface AuthContextValue {
-  session: Session | null;
+interface AuthContextType {
   user: User | null;
-  role: AppRole;
+  profile: UserProfile | null;
+  session: Session | null;
+  role: UserRole;
   loading: boolean;
-  canWrite: boolean;
-  guestMode: boolean;
-  enterGuestMode: () => void;
-  exitGuestMode: () => void;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const readRole = (user: User | null): AppRole => {
-  const value = user?.app_metadata?.role || user?.user_metadata?.role;
-  return value === 'admin' || value === 'developer' ? value : 'viewer';
-};
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(supabaseConfigured);
-  const [role, setRole] = useState<AppRole>('viewer');
-  const [guestMode, setGuestMode] = useState(() => localStorage.getItem('pecem_guest_mode') === 'true');
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [role, setRole] = useState<UserRole>('visualizador');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabaseConfigured) return;
-    let active = true;
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!active) return;
-      setSession(data.session);
-      if (data.session?.user) {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', data.session.user.id).maybeSingle();
-        if (active && (profile?.role === 'admin' || profile?.role === 'developer')) setRole(profile.role);
+    // Busca a sessão inicial
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      setSession(nextSession);
-      if (!nextSession) setRole('viewer');
-      else {
-        const { data: profile } = await supabase.from('profiles').select('role').eq('id', nextSession.user.id).maybeSingle();
-        setRole(profile?.role === 'admin' || profile?.role === 'developer' ? profile.role : 'viewer');
+
+    // Escuta mudanças de estado de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        setProfile(null);
+        setRole('visualizador');
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return () => { active = false; listener.subscription.unsubscribe(); };
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const value = useMemo<AuthContextValue>(() => ({
-    session,
-    user: session?.user ?? null,
-    role,
-    loading,
-    canWrite: role !== 'viewer',
-    guestMode,
-    enterGuestMode: () => {
-      localStorage.setItem('pecem_guest_mode', 'true');
-      setGuestMode(true);
-    },
-    exitGuestMode: () => {
-      localStorage.removeItem('pecem_guest_mode');
-      setGuestMode(false);
-    },
-    signIn: async (email, password) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error ? new Error(error.message) : null };
-    },
-    signOut: async () => {
-      const { error } = await supabase.auth.signOut();
-      return { error: error ? new Error(error.message) : null };
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (data && !error) {
+        setProfile(data as UserProfile);
+        setRole((data.role as UserRole) || 'operador');
+      } else {
+        // Papel fallback padrão caso perfil de banco não exista
+        setRole('operador');
+      }
+    } catch (err) {
+      console.error('Erro ao buscar perfil do usuário:', err);
+      setRole('operador');
+    } finally {
+      setLoading(false);
     }
-  }), [guestMode, loading, role, session]);
+  };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
 
-export function useAuth() {
+  return (
+    <AuthContext.Provider value={{ user, profile, session, role, loading, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth deve ser usado dentro de AuthProvider.');
+  if (!context) {
+    throw new Error('useAuth deve ser utilizado dentro de um AuthProvider');
+  }
   return context;
-}
+};

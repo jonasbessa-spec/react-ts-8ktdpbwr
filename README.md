@@ -6,12 +6,12 @@ Este projeto usa React, TypeScript e Vite. **Nao abra o arquivo `index.html` dir
 
 `Expected a JavaScript-or-Wasm module script ... application/octet-stream`
 
-1. Instale o Node.js LTS pelo site oficial: https://nodejs.org/
+1. Instale o Node.js 24 ou superior pelo site oficial: https://nodejs.org/
 2. Abra o terminal na pasta deste projeto.
 3. Instale as dependencias:
 
 ```bash
-npm install
+npm ci
 ```
 
 4. Crie o arquivo `.env` a partir do `.env.example` e preencha as variaveis do Supabase. A URL e a chave precisam ser do mesmo projeto:
@@ -45,6 +45,32 @@ npm run build
 npm audit --audit-level=high
 ```
 
+### Windows PowerShell
+
+Use `npm.cmd` if PowerShell blocks `npm.ps1` under the current execution policy.
+Install the Puppeteer-managed Chrome once before scraping:
+
+```powershell
+npm.cmd ci
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+npm.cmd run puppeteer:install-browser
+npm.cmd run typecheck
+npm.cmd run build
+npm.cmd run scrape:sictos
+```
+
+The scraper writes eligible records to Supabase. Configure the service-role key
+only in the local, ignored `.env` file or CI secrets. Supabase URL values should
+be the project root URL, not a `/rest/v1` endpoint.
+
+O Vite já fornece atualização automática durante `npm run dev`; não é
+necessário adicionar `nodemon` a este frontend. Para executar localmente o
+scraper Node, preencha as variáveis server-side no `.env` e rode:
+
+```bash
+npm run scrape:sictos
+```
+
 Para testar a versao de producao localmente:
 
 ```bash
@@ -67,7 +93,7 @@ as variáveis de ambiente; não coloque o arquivo `.env` no GitHub.
    - **Framework preset:** `Vite`
    - **Build command:** `npm run build`
    - **Build output directory:** `dist`
-   - **Node.js version:** `20` ou superior
+   - **Node.js version:** `24` ou superior
 
 5. Em **Environment variables**, adicione as duas variáveis abaixo para
    **Production** e **Preview**:
@@ -104,9 +130,21 @@ python scripts/pecem_etl.py
 ```
 
 Para enriquecimento HTTP, configure `PECEM_ENRICHMENT_URL`; o endpoint deve
-retornar uma lista JSON (ou `{ "data": [...] }`) com `nome_navio`, `imo`,
-`duv` e/ou `berco_programado`. Sem esse adapter autorizado, a pipeline não
-inventa IMO; o berço permanece pendente.
+ser um adapter autorizado para PSP/AIS ou para uma API licenciada de dados
+marítimos. Ele deve retornar uma lista JSON (ou `{ "data": [...] }`,
+`{ "ships": [...] }`, `{ "vessels": [...] }` ou `{ "results": [...] }`) com
+`nome_navio`, `imo`, `duv` e/ou `berco_programado`. O código envia
+`port=BRPEC` por padrão. Se o fornecedor exigir autenticação, configure
+`PECEM_ENRICHMENT_API_KEY`; a chave é enviada somente server-side nos headers
+`Authorization: Bearer` e `X-API-Key`.
+
+Clarksons Research e Lloyd's Register são fontes comerciais/licenciadas. A
+contratação, o endpoint e o mapeamento de campos precisam ser confirmados com
+o fornecedor; não use scraping do cadastro público para extração massiva nem
+coloque credenciais no frontend. Depois de obter acesso, publique um pequeno
+adapter interno que converta a resposta licenciada para o contrato acima.
+Sem esse adapter autorizado, a pipeline não inventa IMO; o berço permanece
+pendente.
 
 ### Publicação pelo terminal (opcional)
 
