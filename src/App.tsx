@@ -6,6 +6,7 @@ import ShipBerthForecast from './components/ShipBerthForecast';
 import TechnicalCockpit from './components/TechnicalCockpit';
 import LoginScreen from './components/LoginScreen';
 import { useAuth } from './contexts/AuthContext';
+import type { OperationalDatabaseRow } from './types';
 import {
   LayoutDashboard,
   Truck,
@@ -39,9 +40,9 @@ function DashboardApp() {
   const [periodo, setPeriodo] = useState('hoje');
 
   // Estados de dados do Supabase
-  const [cavalos, setCavalos] = useState<any[]>([]);
-  const [reboques, setReboques] = useState<any[]>([]);
-  const [equipamentosPatio, setEquipamentosPatio] = useState<any[]>([]);
+  const [cavalos, setCavalos] = useState<OperationalDatabaseRow[]>([]);
+  const [reboques, setReboques] = useState<OperationalDatabaseRow[]>([]);
+  const [equipamentosPatio, setEquipamentosPatio] = useState<OperationalDatabaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [erroCarregamento, setErroCarregamento] = useState<string | null>(null);
 
@@ -153,7 +154,7 @@ function DashboardApp() {
   }, [filtros, abaAtiva]);
 
   // Auxiliar para leitura de campos de dados flexíveis
-  const getValor = (item: any, chaves: string[]) => {
+  const getValor = (item: OperationalDatabaseRow, chaves: readonly string[]) => {
     for (const k of chaves) {
       if (item[k] !== undefined && item[k] !== null && item[k] !== '') return String(item[k]);
     }
@@ -184,7 +185,7 @@ function DashboardApp() {
         if (error) throw error;
       } else {
         const tabela = novoItem.origem === 'cm' ? 'cm' : 'sr';
-        const payloadFrota: Record<string, any> = {
+        const payloadFrota: Record<string, unknown> = {
           FROTA: novoItem.codigoOuBem.toUpperCase(),
           LOCALIZAÇÃO: novoItem.localizacao.toUpperCase(),
           TIPO: novoItem.swlOuTipo ? novoItem.swlOuTipo.toUpperCase() : 'PADRÃO',
@@ -215,8 +216,8 @@ function DashboardApp() {
         observacao: ''
       });
       carregarDados();
-    } catch (err: any) {
-      alert(`Erro ao cadastrar: ${err.message}`);
+    } catch (err) {
+      alert(`Erro ao cadastrar: ${getSupabaseErrorMessage(err, 'Não foi possível cadastrar o equipamento.')}`);
     } finally {
       setSalvando(false);
     }
@@ -250,7 +251,7 @@ function DashboardApp() {
   const dadosFiltrados = useMemo(() => {
     const buscaLower = filtros.busca.trim().toLowerCase();
 
-    const aplicarFiltros = (item: any, ePatio = false) => {
+    const aplicarFiltros = (item: OperationalDatabaseRow, ePatio = false) => {
       const identificacao = ePatio
         ? String(item.bem || '').toLowerCase()
         : getValor(item, ['FROTA', 'frota']).toLowerCase();
@@ -593,7 +594,7 @@ function DashboardApp() {
                             )}
                           </td>
                           <td className="p-3.5 text-slate-600">
-                            {isPatio ? (item.observacao || (item.dias_parado > 0 ? `${item.dias_parado}d parado` : '-')) : getValor(item, ['ATIVIDADE', 'ATIVADE'])}
+                            {isPatio ? (item.observacao || (Number(item.dias_parado ?? 0) > 0 ? `${item.dias_parado}d parado` : '-')) : getValor(item, ['ATIVIDADE', 'ATIVADE'])}
                           </td>
                         </tr>
                       );

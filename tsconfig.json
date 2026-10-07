@@ -20,7 +20,6 @@
   "exclude": [
     "node_modules",
     "src/lib/supabase/functions",
-    "functions",
-    "public/_worker.js"
+    "functions"
   ]
 }

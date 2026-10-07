@@ -1,16 +1,18 @@
 import React from 'react';
 import { SlidersHorizontal, Search } from 'lucide-react';
 
+interface GlobalFiltersState {
+  data: string;
+  plantao: string;
+  funcao: string;
+  setor: string;
+  status: string;
+  busca: string;
+}
+
 interface Props {
-  filtros: {
-    data: string;
-    plantao: string;
-    funcao: string;
-    setor: string;
-    status: string;
-    busca: string;
-  };
-  setFiltros: React.Dispatch<React.SetStateAction<any>>;
+  filtros: GlobalFiltersState;
+  setFiltros: React.Dispatch<React.SetStateAction<GlobalFiltersState>>;
   opcoes: {
     plantoes: string[];
     funcoes: string[];
@@ -37,7 +39,7 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
           name="data"
           type="date"
           value={filtros.data}
-          onChange={(e) => setFiltros((prev: any) => ({ ...prev, data: e.target.value }))}
+          onChange={(e) => setFiltros((prev) => ({ ...prev, data: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
         />
 
@@ -45,7 +47,7 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
           id="global-plantao"
           name="plantao"
           value={filtros.plantao}
-          onChange={(e) => setFiltros((prev: any) => ({ ...prev, plantao: e.target.value }))}
+          onChange={(e) => setFiltros((prev) => ({ ...prev, plantao: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
         >
           <option value="TODOS">Todos os plantões</option>
@@ -58,7 +60,7 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
           id="global-funcao"
           name="funcao"
           value={filtros.funcao}
-          onChange={(e) => setFiltros((prev: any) => ({ ...prev, funcao: e.target.value }))}
+          onChange={(e) => setFiltros((prev) => ({ ...prev, funcao: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
         >
           <option value="TODAS">Todas as funções</option>
@@ -71,7 +73,7 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
           id="global-setor"
           name="setor"
           value={filtros.setor}
-          onChange={(e) => setFiltros((prev: any) => ({ ...prev, setor: e.target.value }))}
+          onChange={(e) => setFiltros((prev) => ({ ...prev, setor: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
         >
           <option value="TODOS">Todos os setores</option>
@@ -84,7 +86,7 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
           id="global-status"
           name="status"
           value={filtros.status}
-          onChange={(e) => setFiltros((prev: any) => ({ ...prev, status: e.target.value }))}
+          onChange={(e) => setFiltros((prev) => ({ ...prev, status: e.target.value }))}
           className="bg-[#0b0f19] border border-[#334155] text-slate-100 text-xs rounded-lg px-3 py-2 outline-none"
         >
           <option value="TODOS">Todos os status</option>
@@ -101,7 +103,7 @@ export const GlobalFilters: React.FC<Props> = ({ filtros, setFiltros, opcoes, on
             type="text"
             placeholder="Pesquisar por nome..."
             value={filtros.busca}
-            onChange={(e) => setFiltros((prev: any) => ({ ...prev, busca: e.target.value }))}
+            onChange={(e) => setFiltros((prev) => ({ ...prev, busca: e.target.value }))}
             className="bg-transparent text-xs text-slate-100 p-2 outline-none w-full"
           />
         </div>

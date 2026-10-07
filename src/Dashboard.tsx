@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { getDadosIntegrados, ResumoOperacional } from './lib/frotasService';
+import { getDadosIntegrados } from './lib/frotasService';
+import type { ResumoOperacional } from './lib/frotasService';
+import type { OperationalDatabaseRow } from './types';
 
 export function Dashboard() {
   const [dados, setDados] = useState<ResumoOperacional | null>(null);
@@ -85,11 +87,11 @@ export function Dashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {dados?.equipamentos.listaSemirreboques.slice(0, 10).map((item: any, idx: number) => (
+              {dados?.equipamentos.listaSemirreboques.slice(0, 10).map((item: OperationalDatabaseRow, idx: number) => (
                 <tr key={idx} className="hover:bg-slate-800/40">
-                  <td className="p-3 font-mono text-blue-400">{item.FROTA}</td>
-                  <td className="p-3">{item.LOCALIZACAO}</td>
-                  <td className="p-3">{item.TIPO}</td>
+                  <td className="p-3 font-mono text-blue-400">{String(item.FROTA ?? '')}</td>
+                  <td className="p-3">{String(item.LOCALIZACAO ?? item.LOCALIZAÇÃO ?? '')}</td>
+                  <td className="p-3">{String(item.TIPO ?? item.tipo ?? '')}</td>
                 </tr>
               ))}
             </tbody>

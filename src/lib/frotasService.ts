@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
-
-type DatabaseRow = Record<string, unknown>;
+import type { OperationalDatabaseRow } from '../types';
 
 export interface Equipamento {
   id: string;
@@ -16,7 +15,7 @@ export interface ResumoOperacional {
   equipamentos: {
     semirreboquesTotal: number;
     cavalosTotal: number;
-    listaSemirreboques: DatabaseRow[];
+    listaSemirreboques: OperationalDatabaseRow[];
   };
   staff: {
     emTurno: number;
@@ -77,7 +76,7 @@ export const getEquipamentos = async (): Promise<Equipamento[]> => {
   if (error) throw error;
 
   const mapEquipment = (
-    rows: DatabaseRow[],
+    rows: OperationalDatabaseRow[],
     type: Equipamento['tipo_equipamento'],
     defaultCode: string,
     defaultDescription: string,
@@ -101,8 +100,8 @@ export const getEquipamentos = async (): Promise<Equipamento[]> => {
   });
 
   return [
-    ...mapEquipment((srRes.data || []) as DatabaseRow[], 'semirreboques', 'SR', 'Semirreboque'),
-    ...mapEquipment((cmRes.data || []) as DatabaseRow[], 'cavalos', 'CM', 'Cavalo Mecânico'),
-    ...mapEquipment((patioRes.data || []) as DatabaseRow[], 'patio', 'EQP', 'Equipamento Pátio'),
+    ...mapEquipment((srRes.data || []) as OperationalDatabaseRow[], 'semirreboques', 'SR', 'Semirreboque'),
+    ...mapEquipment((cmRes.data || []) as OperationalDatabaseRow[], 'cavalos', 'CM', 'Cavalo Mecânico'),
+    ...mapEquipment((patioRes.data || []) as OperationalDatabaseRow[], 'patio', 'EQP', 'Equipamento Pátio'),
   ];
 };

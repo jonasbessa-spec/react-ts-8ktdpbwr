@@ -376,7 +376,7 @@ export const CockpitExecutivo: React.FC = () => {
                 </Pie>
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', borderRadius: '8px' }}
-                  formatter={(value: any) => [`${value} horas`, 'Tempo Parado']}
+                  formatter={(value) => [`${value} horas`, 'Tempo Parado']}
                 />
               </PieChart>
             </ResponsiveContainer>

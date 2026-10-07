@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import type { OperationalDatabaseRow, OperacaoPranchaRow } from '../types';
 
 export interface PranchaKPI {
   operacao_id: string;
@@ -28,9 +29,7 @@ interface CockpitData {
   error: string | null;
 }
 
-type DatabaseRow = Record<string, unknown>;
-
-const readText = (row: DatabaseRow, keys: string[], fallback = ''): string => {
+const readText = (row: OperationalDatabaseRow, keys: readonly string[], fallback = ''): string => {
   for (const key of keys) {
     const value = row[key];
     if (value !== undefined && value !== null && value !== '') return String(value);
@@ -38,7 +37,7 @@ const readText = (row: DatabaseRow, keys: string[], fallback = ''): string => {
   return fallback;
 };
 
-const readNumber = (row: DatabaseRow, keys: string[]): number => {
+const readNumber = (row: OperationalDatabaseRow, keys: readonly string[]): number => {
   for (const key of keys) {
     const value = Number(row[key]);
     if (Number.isFinite(value)) return value;
@@ -73,11 +72,11 @@ export function useCockpitData() {
       if (error) throw error;
       if (!mounted.current || currentRequest !== requestId.current) return;
 
-      const rawOperations = (boardResult.data?.length ? boardResult.data : operationsResult.data || []) as DatabaseRow[];
+      const rawOperations = (boardResult.data?.length ? boardResult.data : operationsResult.data || []) as OperacaoPranchaRow[];
       const rawFleet = [
-        ...((cmResult.data || []) as DatabaseRow[]).map((row) => ({ ...row, _category: 'Cavalo mecânico' })),
-        ...((srResult.data || []) as DatabaseRow[]).map((row) => ({ ...row, _category: 'Semirreboque' })),
-        ...((yardResult.data || []) as DatabaseRow[]).map((row) => ({ ...row, _category: 'Equipamento de pátio' })),
+        ...((cmResult.data || []) as OperationalDatabaseRow[]).map((row) => ({ ...row, _category: 'Cavalo mecânico' })),
+        ...((srResult.data || []) as OperationalDatabaseRow[]).map((row) => ({ ...row, _category: 'Semirreboque' })),
+        ...((yardResult.data || []) as OperationalDatabaseRow[]).map((row) => ({ ...row, _category: 'Equipamento de pátio' })),
       ];
       setData({
         pranchaData: rawOperations.map((row, index) => ({
