@@ -49,10 +49,17 @@ export function useCockpitData() {
     if (!supabaseConfigured) {
       const fallback = getCollaboratorFallback();
       if (requestId === requestSequence.current) {
-        setData((prev) => ({ ...prev, colaboradores: fallback.collaborators, colaboradoresSource: fallback.source, loading: false, error: null }));
+        setData((prev) => ({
+          ...prev,
+          colaboradores: fallback.collaborators,
+          colaboradoresSource: fallback.source,
+          loading: false,
+          error: null,
+        }));
       }
       return;
     }
+
     setData((prev) => ({ ...prev, loading: true }));
     try {
       const [colabRes, opsRes, pranchaRes, frotaRes] = await Promise.all([
@@ -66,20 +73,20 @@ export function useCockpitData() {
       const ops = ((pranchaRes.data && pranchaRes.data.length > 0)
         ? pranchaRes.data
         : (opsRes.data || [])) as PranchaKPI[];
-
       const remoteCollaborators = (colabRes.data || []) as Record<string, unknown>[];
       const collaboratorData = remoteCollaborators.length
         ? { collaborators: normalizeCollaborators(remoteCollaborators, 'supabase'), source: 'supabase' as const }
         : getCollaboratorFallback();
-      const totalPrancha = ops.reduce((acc, item) => acc + Number(item.prancha_realizada_ton_h || item.prancha_real || 0), 0);
+      const totalPrancha = ops.reduce(
+        (acc, item) => acc + Number(item.prancha_realizada_ton_h || item.prancha_real || 0),
+        0,
+      );
       const media = ops.length > 0 ? Number((totalPrancha / ops.length).toFixed(1)) : 0;
 
-      // Erro só bloqueia a tela se nenhuma fonte de operações respondeu.
       const blocking = pranchaRes.error && opsRes.error ? pranchaRes.error : null;
-
       setData({
         colaboradores: collaboratorData.collaborators,
-        colaboradoresSource: remoteCollaborators.length ? 'supabase' : collaboratorData.source,
+        colaboradoresSource: collaboratorData.source,
         operacoes: ops,
         frota: (frotaRes.data || []) as FrotaKPI[],
         pranchaMedia: media,
@@ -91,7 +98,13 @@ export function useCockpitData() {
       if (requestId !== requestSequence.current) return;
       console.error('Erro no useCockpitData:', err);
       const fallback = getCollaboratorFallback();
-      setData((prev) => ({ ...prev, colaboradores: fallback.collaborators, colaboradoresSource: fallback.source, loading: false, error: getSupabaseErrorMessage(err) }));
+      setData((prev) => ({
+        ...prev,
+        colaboradores: fallback.collaborators,
+        colaboradoresSource: fallback.source,
+        loading: false,
+        error: getSupabaseErrorMessage(err),
+      }));
     }
   }, []);
 
