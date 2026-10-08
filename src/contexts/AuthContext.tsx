@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase, supabaseConfigured } from '../lib/supabase';
+import { isLocalDemoEnvironment } from '../lib/localCollaborators';
 
 export type AppRole = 'admin' | 'developer' | 'viewer';
 interface AuthContextValue {
@@ -26,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<AppRole>('viewer');
 
   useEffect(() => {
-    if (!supabaseConfigured) return;
+    if (!supabaseConfigured || isLocalDemoEnvironment()) return;
     let active = true;
     let hasAuthEvent = false;
     let sessionRevision = 0;

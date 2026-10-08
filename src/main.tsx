@@ -9,3 +9,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <AuthProvider><App /></AuthProvider>
   </React.StrictMode>
 );
+
+// Service worker apenas em produção (no dev o cache atrapalha o hot reload).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((cause: unknown) => {
+      console.error('Não foi possível registrar o cache offline do aplicativo.', cause);
+    });
+  });
+}

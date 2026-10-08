@@ -1,108 +1,56 @@
-import { supabase } from './supabase';
-
-type DatabaseRow = Record<string, unknown>;
-
-export interface Equipamento {
-  id: string;
-  codigo_bem: string;
-  descricao: string;
-  tipo_equipamento: 'cavalos' | 'semirreboques' | 'patio';
-  status: 'disponivel' | 'em_uso' | 'manutencao';
-  localizacao?: string;
-  turno?: string;
-}
+import { supabase, supabaseConfigured, supabaseConfigError } from './supabase';
+import type { OperationalDatabaseRow } from '../types';
 
 export interface ResumoOperacional {
-  equipamentos: {
-    semirreboquesTotal: number;
-    cavalosTotal: number;
-    listaSemirreboques: DatabaseRow[];
-  };
-  staff: {
-    emTurno: number;
-    totalColaboradores: number;
-  };
-  operacoes: {
-    pranchaMedia: number;
-  };
+  id?: string;
+  equipamento?: string;
+  status_atual?: string;
+  prancha_realizada_ton_h?: number;
+  meta_prancha_ton_h?: number;
+  [key: string]: unknown;
 }
 
-export async function getDadosIntegrados(): Promise<ResumoOperacional> {
-  const [cmRes, srRes, staffRes, operationsRes, boardRes] = await Promise.all([
-    supabase.from('cm').select('*'),
-    supabase.from('sr').select('*'),
-    supabase.from('colaboradores').select('*'),
-    supabase.from('operacoes_navio').select('*'),
-    supabase.from('view_kpi_prancha_operacional').select('*'),
-  ]);
+type Row = OperationalDatabaseRow;
 
-  const error = cmRes.error || srRes.error || staffRes.error || operationsRes.error || boardRes.error;
-  if (error) throw error;
+const isCavalo = (row: Row) => /cavalo|^cm\b|trator/i.test(String(row.TIPO ?? row.tipo ?? row.categoria ?? ''));
+const isSemi = (row: Row) => /semi|^sr\b|reboque|carreta/i.test(String(row.TIPO ?? row.tipo ?? row.categoria ?? ''));
 
-  const operations = boardRes.data?.length ? boardRes.data : operationsRes.data || [];
-  const rates = operations
-    .map((row) => Number(row.prancha_realizada_ton_h ?? row.prancha_real ?? 0))
-    .filter(Number.isFinite);
-  const presentStatuses = new Set(['presente', 'present', 'em turno', 'operando']);
-  const staffOnDuty = (staffRes.data || []).filter((row) =>
-    presentStatuses.has(String(row.status || '').trim().toLowerCase()),
-  ).length;
+/**
+ * Lê as tabelas de frota. Usa `cm`, `sr` e `equipamentos_patio` (as tabelas
+ * protegidas pela migration de RLS) e, se `cm`/`sr` não existirem, tenta a
+ * tabela única `frotas`, separando cavalos e semirreboques pela coluna TIPO.
+ */
+export const getDadosIntegrados = async () => {
+  if (!supabaseConfigured) return { cm: [], sr: [], patio: [], operacoes: [], error: new Error(supabaseConfigError || '') };
+  try {
+    const [cmRes, srRes, patioRes, operacoesRes] = await Promise.all([
+      supabase.from('cm').select('*'),
+      supabase.from('sr').select('*'),
+      supabase.from('equipamentos_patio').select('*'),
+      supabase.from('operacoes_navio').select('*'),
+    ]);
 
-  return {
-    equipamentos: {
-      semirreboquesTotal: srRes.data?.length || 0,
-      cavalosTotal: cmRes.data?.length || 0,
-      listaSemirreboques: srRes.data || [],
-    },
-    staff: {
-      emTurno: staffOnDuty,
-      totalColaboradores: staffRes.data?.length || 0,
-    },
-    operacoes: {
-      pranchaMedia: rates.length
-        ? Number((rates.reduce((total, rate) => total + rate, 0) / rates.length).toFixed(1))
-        : 0,
-    },
-  };
-}
+    let cm: Row[] = cmRes.data || [];
+    let sr: Row[] = srRes.data || [];
+    let fallbackError = null;
 
-export const getEquipamentos = async (): Promise<Equipamento[]> => {
-  const [cmRes, srRes, patioRes] = await Promise.all([
-    supabase.from('cm').select('*'),
-    supabase.from('sr').select('*'),
-    supabase.from('equipamentos_patio').select('*')
-  ]);
+    if (cmRes.error && srRes.error) {
+      const frotasRes = await supabase.from('frotas').select('*');
+      fallbackError = frotasRes.error;
+      const frotas: Row[] = frotasRes.data || [];
+      cm = frotas.filter(isCavalo);
+      sr = frotas.filter((row) => isSemi(row) || !isCavalo(row));
+    }
 
-  const error = cmRes.error || srRes.error || patioRes.error;
-  if (error) throw error;
-
-  const mapEquipment = (
-    rows: DatabaseRow[],
-    type: Equipamento['tipo_equipamento'],
-    defaultCode: string,
-    defaultDescription: string,
-  ): Equipamento[] => rows.map((item, index) => {
-    const status = String(item.STATUS ?? item.status ?? '').toLowerCase();
-    const rawCode = item.FROTA ?? item.frota ?? item.codigo ?? item.bem;
-    const code = String(rawCode ?? defaultCode);
-    const normalizedStatus = status.includes('manut') || status.includes('parado')
-      ? 'manutencao'
-      : status.includes('uso') || status.includes('operando')
-        ? 'em_uso'
-        : 'disponivel';
     return {
-      id: String(item.id ?? rawCode ?? `${type}-${index}`),
-      codigo_bem: code,
-      descricao: String(item.TIPO ?? item.tipo ?? item.MODELO ?? item.categoria ?? defaultDescription),
-      tipo_equipamento: type,
-      status: normalizedStatus,
-      localizacao: String(item.LOCALIZACAO ?? item.localizacao ?? 'PORTO'),
+      cm,
+      sr,
+      patio: patioRes.data || [],
+      operacoes: operacoesRes.data || [],
+      error: fallbackError || (cmRes.error && srRes.error && patioRes.error ? cmRes.error : null),
     };
-  });
-
-  return [
-    ...mapEquipment((srRes.data || []) as DatabaseRow[], 'semirreboques', 'SR', 'Semirreboque'),
-    ...mapEquipment((cmRes.data || []) as DatabaseRow[], 'cavalos', 'CM', 'Cavalo Mecânico'),
-    ...mapEquipment((patioRes.data || []) as DatabaseRow[], 'patio', 'EQP', 'Equipamento Pátio'),
-  ];
+  } catch (err) {
+    console.error('Erro em getDadosIntegrados:', err);
+    return { cm: [], sr: [], patio: [], operacoes: [], error: err };
+  }
 };
