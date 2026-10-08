@@ -31,6 +31,11 @@ export interface PlanningCollaborator {
   id: string | number;
   name: string;
   registration: string;
+  cpf?: string;
+  jobTitle?: string;
+  admissionDate?: string;
+  acquisitionStart?: string;
+  concessionEnd?: string;
   shift: PlanningShift;
   regime: PlanningRegime;
   status: PlanningStatus;

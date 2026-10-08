@@ -1,121 +1,108 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import type { OperationalDatabaseRow, OperacaoPranchaRow } from '../types';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { supabase, supabaseConfigured, supabaseConfigError, getSupabaseErrorMessage } from '../lib/supabase';
+import { getCollaboratorFallback, normalizeCollaborators, SGO_DATA_CHANGED_EVENT, type CollaboratorSource } from '../lib/sgoData';
+import type { ColaboradorRow, OperationalDatabaseRow } from '../types';
 
-export interface PranchaKPI {
-  operacao_id: string;
-  nome_navio: string;
-  imo_number: string | null;
-  berco_codigo: string;
-  tipo_operacao: string;
-  tipo_carga: string;
-  meta_prancha_ton_h: number;
-  prancha_realizada_ton_h: number;
-  percentual_concluido: number;
-  horas_operadas: number;
+export interface PranchaKPI extends OperationalDatabaseRow {
+  operacao_id?: string | null;
+  nome_navio?: string;
+  prancha_realizada_ton_h?: number | null;
+  prancha_real?: number | null;
+  meta_prancha_ton_h?: number | null;
+  percentual_concluido?: number | null;
+  status?: string;
 }
 
-export interface FrotaKPI {
-  tag: string;
-  categoria: string;
-  status_atual: string;
-  minutos_parado_hoje: number;
+export interface FrotaKPI extends OperationalDatabaseRow {
+  equipamento?: string;
+  status_atual?: string;
 }
 
-interface CockpitData {
-  pranchaData: PranchaKPI[];
-  frotaData: FrotaKPI[];
+interface CockpitState {
+  colaboradores: ColaboradorRow[];
+  colaboradoresSource: CollaboratorSource;
+  operacoes: PranchaKPI[];
+  frota: FrotaKPI[];
+  pranchaMedia: number;
   loading: boolean;
   error: string | null;
+  updatedAt: Date | null;
 }
 
-const readText = (row: OperationalDatabaseRow, keys: readonly string[], fallback = ''): string => {
-  for (const key of keys) {
-    const value = row[key];
-    if (value !== undefined && value !== null && value !== '') return String(value);
-  }
-  return fallback;
-};
-
-const readNumber = (row: OperationalDatabaseRow, keys: readonly string[]): number => {
-  for (const key of keys) {
-    const value = Number(row[key]);
-    if (Number.isFinite(value)) return value;
-  }
-  return 0;
+const initialState: CockpitState = {
+  colaboradores: [],
+  colaboradoresSource: 'demonstração',
+  operacoes: [],
+  frota: [],
+  pranchaMedia: 0,
+  loading: true,
+  error: null,
+  updatedAt: null,
 };
 
 export function useCockpitData() {
-  const [data, setData] = useState<CockpitData>({
-    pranchaData: [],
-    frotaData: [],
-    loading: true,
-    error: null
-  });
-  const mounted = useRef(false);
-  const requestId = useRef(0);
+  const [data, setData] = useState<CockpitState>(initialState);
+  const requestSequence = useRef(0);
 
-  const refetch = useCallback(async () => {
-    const currentRequest = ++requestId.current;
-    if (mounted.current) {
-      setData((current) => ({ ...current, loading: true, error: null }));
+  const load = useCallback(async () => {
+    const requestId = ++requestSequence.current;
+    if (!supabaseConfigured) {
+      const fallback = getCollaboratorFallback();
+      if (requestId === requestSequence.current) {
+        setData((prev) => ({ ...prev, colaboradores: fallback.collaborators, colaboradoresSource: fallback.source, loading: false, error: null }));
+      }
+      return;
     }
+    setData((prev) => ({ ...prev, loading: true }));
     try {
-      const [operationsResult, boardResult, cmResult, srResult, yardResult] = await Promise.all([
+      const [colabRes, opsRes, pranchaRes, frotaRes] = await Promise.all([
+        supabase.from('colaboradores').select('*'),
         supabase.from('operacoes_navio').select('*'),
         supabase.from('view_kpi_prancha_operacional').select('*'),
-        supabase.from('cm').select('*'),
-        supabase.from('sr').select('*'),
         supabase.from('equipamentos_patio').select('*'),
       ]);
-      const error = operationsResult.error || boardResult.error || cmResult.error || srResult.error || yardResult.error;
-      if (error) throw error;
-      if (!mounted.current || currentRequest !== requestId.current) return;
+      if (requestId !== requestSequence.current) return;
 
-      const rawOperations = (boardResult.data?.length ? boardResult.data : operationsResult.data || []) as OperacaoPranchaRow[];
-      const rawFleet = [
-        ...((cmResult.data || []) as OperationalDatabaseRow[]).map((row) => ({ ...row, _category: 'Cavalo mecânico' })),
-        ...((srResult.data || []) as OperationalDatabaseRow[]).map((row) => ({ ...row, _category: 'Semirreboque' })),
-        ...((yardResult.data || []) as OperationalDatabaseRow[]).map((row) => ({ ...row, _category: 'Equipamento de pátio' })),
-      ];
+      const ops = ((pranchaRes.data && pranchaRes.data.length > 0)
+        ? pranchaRes.data
+        : (opsRes.data || [])) as PranchaKPI[];
+
+      const remoteCollaborators = (colabRes.data || []) as Record<string, unknown>[];
+      const collaboratorData = remoteCollaborators.length
+        ? { collaborators: normalizeCollaborators(remoteCollaborators, 'supabase'), source: 'supabase' as const }
+        : getCollaboratorFallback();
+      const totalPrancha = ops.reduce((acc, item) => acc + Number(item.prancha_realizada_ton_h || item.prancha_real || 0), 0);
+      const media = ops.length > 0 ? Number((totalPrancha / ops.length).toFixed(1)) : 0;
+
+      // Erro só bloqueia a tela se nenhuma fonte de operações respondeu.
+      const blocking = pranchaRes.error && opsRes.error ? pranchaRes.error : null;
+
       setData({
-        pranchaData: rawOperations.map((row, index) => ({
-          operacao_id: readText(row, ['operacao_id', 'id'], `operacao-${index}`),
-          nome_navio: readText(row, ['nome_navio', 'navio'], 'Navio sem identificação'),
-          imo_number: readText(row, ['imo_number', 'imo']) || null,
-          berco_codigo: readText(row, ['berco_codigo', 'berco'], 'Pendente'),
-          tipo_operacao: readText(row, ['tipo_operacao', 'operacao'], 'Não informado'),
-          tipo_carga: readText(row, ['tipo_carga', 'carga'], 'Não informado'),
-          meta_prancha_ton_h: readNumber(row, ['meta_prancha_ton_h']),
-          prancha_realizada_ton_h: readNumber(row, ['prancha_realizada_ton_h', 'prancha_real']),
-          percentual_concluido: readNumber(row, ['percentual_concluido']),
-          horas_operadas: readNumber(row, ['horas_operadas']),
-        })),
-        frotaData: rawFleet.map((row) => ({
-          tag: readText(row, ['tag', 'FROTA', 'frota', 'bem', 'codigo'], 'Sem identificação'),
-          categoria: readText(row, ['categoria', '_category'], 'Equipamento'),
-          status_atual: readText(row, ['status_atual', 'STATUS', 'status'], 'desconhecido').toLowerCase(),
-          minutos_parado_hoje: readNumber(row, ['minutos_parado_hoje', 'minutos_parado', 'dias_parado']),
-        })),
+        colaboradores: collaboratorData.collaborators,
+        colaboradoresSource: remoteCollaborators.length ? 'supabase' : collaboratorData.source,
+        operacoes: ops,
+        frota: (frotaRes.data || []) as FrotaKPI[],
+        pranchaMedia: media,
         loading: false,
-        error: null,
+        error: blocking ? getSupabaseErrorMessage(blocking) : null,
+        updatedAt: new Date(),
       });
-    } catch (cause) {
-      if (!mounted.current || currentRequest !== requestId.current) return;
-      const message = cause instanceof Error ? cause.message : 'Não foi possível carregar os dados do cockpit.';
-      console.error('Erro no useCockpitData:', cause);
-      setData((current) => ({ ...current, loading: false, error: message }));
+    } catch (err) {
+      if (requestId !== requestSequence.current) return;
+      console.error('Erro no useCockpitData:', err);
+      const fallback = getCollaboratorFallback();
+      setData((prev) => ({ ...prev, colaboradores: fallback.collaborators, colaboradoresSource: fallback.source, loading: false, error: getSupabaseErrorMessage(err) }));
     }
   }, []);
 
   useEffect(() => {
-    mounted.current = true;
-    void refetch();
-    return () => {
-      mounted.current = false;
-      requestId.current += 1;
-    };
-  }, [refetch]);
+    void load();
+    const onSgoDataChanged = () => { void load(); };
+    window.addEventListener(SGO_DATA_CHANGED_EVENT, onSgoDataChanged);
+    return () => window.removeEventListener(SGO_DATA_CHANGED_EVENT, onSgoDataChanged);
+  }, [load]);
 
-  return { ...data, refetch };
+  return { ...data, reload: load };
 }
+
+export { supabaseConfigured, supabaseConfigError, getSupabaseErrorMessage };

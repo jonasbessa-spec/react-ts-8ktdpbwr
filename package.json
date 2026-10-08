@@ -11,7 +11,7 @@
     "start": "vite",
     "build": "tsc && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test functions/api/ships.test.ts",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test functions/api/ships.test.ts src/lib/localCollaborators.test.mjs src/lib/sgoData.test.mjs",
     "preview": "vite preview",
     "puppeteer:install-browser": "puppeteer browsers install chrome",
     "scrape:sictos": "node --env-file-if-exists=.env scripts/scrape-sictos.mjs"

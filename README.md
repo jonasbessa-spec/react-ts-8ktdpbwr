@@ -6,6 +6,11 @@ Este projeto usa React, TypeScript e Vite. **Nao abra o arquivo `index.html` dir
 
 `Expected a JavaScript-or-Wasm module script ... application/octet-stream`
 
+O painel autenticado inclui Visão geral, Previsão de navios, Produtividade,
+Planejamento, Frota e Apontamento de campo. A navegação funciona em telas
+pequenas e grandes; o service worker mantém recursos estáticos disponíveis
+offline e não armazena chamadas ao Supabase nem à API.
+
 1. Instale o Node.js 24 ou superior pelo site oficial: https://nodejs.org/
 2. Abra o terminal na pasta deste projeto.
 3. Instale as dependencias:
@@ -41,6 +46,7 @@ Mantenha o terminal aberto enquanto usa o sistema. Para parar o servidor, pressi
 
 ```bash
 npm run typecheck
+npm test
 npm run build
 npm audit --audit-level=high
 ```
@@ -70,6 +76,14 @@ scraper Node, preencha as variáveis server-side no `.env` e rode:
 ```bash
 npm run scrape:sictos
 ```
+
+Em `npm run dev` no localhost, StackBlitz ou WebContainer, o painel Planejamento
+abre em modo de demonstração sem chamadas ao Supabase. Os colaboradores de
+exemplo e as alterações são salvos no `localStorage` do navegador. A tabela
+aceita importação CSV/TSV com cabeçalhos `Nome`, `CPF`, `Cargo`, `Turno`,
+`Data de admissão`, `Início do período aquisitivo` e `Fim do período
+concessivo`. Esse modo só é ativado no servidor de desenvolvimento; não é
+incluído na aplicação de produção.
 
 Para testar a versao de producao localmente:
 
@@ -110,6 +124,25 @@ deploy automaticamente.
 Depois do primeiro deploy, teste o endereço `*.pages.dev` e confirme que os
 indicadores carregam dados. Se aparecer uma mensagem de configuração inválida,
 revise as variáveis no ambiente do Cloudflare e use **Retry deployment**.
+
+## Segurança das tabelas operacionais
+
+A migration `supabase/migrations/20261007120000_operational_tables_rls.sql`
+ativa RLS nas tabelas operacionais existentes, permite leitura a usuários
+autenticados e limita gravações às funções administrativas, com exceção do
+registro de interrupções feito pelo apontamento autenticado. A migration só
+aplica políticas às tabelas que já existem; revise-a e aplique-a no Supabase
+depois das migrations anteriores. A migration
+`supabase/migrations/20261008110000_enable_sgo_realtime.sql` adiciona
+`colaboradores` e `previsao_navios` à publicação `supabase_realtime`, se as
+tabelas e a publicação já existirem. A assinatura do cliente envia eventos
+Realtime às telas abertas. Berços sem valor recebem apenas uma sugestão
+heurística na interface (ETA, ETD e tipo de carga); isso não grava a sugestão na
+tabela nem substitui a confirmação operacional.
+
+Quando `colaboradores` não retorna linhas ou a consulta falha, o Cockpit tenta
+`localStorage.unilink_colaboradores` e, por último, mostra cinco linhas
+explicitamente identificadas como dados de demonstração.
 
 ## ETL de Line-Up e enriquecimento
 

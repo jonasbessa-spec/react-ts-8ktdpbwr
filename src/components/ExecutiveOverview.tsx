@@ -59,13 +59,13 @@ export default function ExecutiveOverview({
     <section className="executive-overview" aria-label="Resumo executivo operacional">
       <div className="executive-hero">
         <div>
-          <div className="executive-eyebrow"><span className="live-dot" /> Cockpit executivo <span>•</span> 24/7</div>
-          <h2>Comando operacional do terminal</h2>
+          <div className="executive-eyebrow"><span className="live-dot" /> Frota e equipamentos <span>•</span> disponibilidade</div>
+          <h2>Prontidão da frota</h2>
           <p>{formatDate()} · visão consolidada de frota, berços e produtividade marítima.</p>
         </div>
         <div className="executive-hero-status">
           <div className="status-icon"><Activity size={18} /></div>
-          <div><span>Status da operação</span><strong>{status}</strong></div>
+          <div><span>Status da frota</span><strong>{status}</strong></div>
           <ArrowUpRight size={18} className="status-arrow" />
         </div>
       </div>
@@ -96,7 +96,7 @@ export default function ExecutiveOverview({
       </div>
 
       <div className="executive-footer">
-        <span><Clock3 size={14} /> Atualização contínua via Supabase Realtime</span>
+        <span><Clock3 size={14} /> Dados das tabelas cm, sr e equipamentos_patio</span>
         <span className={attention ? 'attention-text' : 'healthy-text'}>
           {attention ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
           {attention ? `${attention} indicadores requerem atenção` : 'Todos os indicadores dentro do alvo'}

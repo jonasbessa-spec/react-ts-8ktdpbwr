@@ -51,10 +51,19 @@ export interface OperacaoPranchaRow extends OperationalDatabaseRow {
 
 export interface ColaboradorRow extends OperationalDatabaseRow {
   nome?: string;
+  name?: string;
+  colaborador?: string;
+  cargo?: string;
+  role?: string;
+  funcao?: string;
   matricula?: string;
   turno?: string;
+  shift?: string;
+  escala?: string;
+  status?: string;
   regime?: string;
   area?: string;
+  fonte_dados?: 'supabase' | 'cache local' | 'demonstração';
 }
 
 export interface FiltrosState {
